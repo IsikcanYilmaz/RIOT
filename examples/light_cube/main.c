@@ -6,6 +6,8 @@
 #include "timex.h"
 #include "ztimer.h"
 
+#include "addr_led_driver.h"
+
 #include "periph/pwm.h"
 
 #include "thread.h"
