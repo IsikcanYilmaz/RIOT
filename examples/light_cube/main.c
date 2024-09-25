@@ -32,7 +32,6 @@ void *blink_threadHandler(void *arg)
 		printf("TEST %d thread %s\r\n", on, thisThreadName);
 		ztimer_sleep(ZTIMER_USEC, 1 * US_PER_SEC);
 	}
-
 }
 
 int main(void)

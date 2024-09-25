@@ -18,4 +18,7 @@ QUIET ?= 1
 # Use a peripheral timer for the delay, if available
 FEATURES_OPTIONAL += periph_timer
 
+# Modules
+USEMODULE += ws281x_esp32
+
 include $(RIOTBASE)/Makefile.include
