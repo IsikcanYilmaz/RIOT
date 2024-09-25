@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define ADDR_LED_SIGNAL_GPIO_PIN 0 //16
 
