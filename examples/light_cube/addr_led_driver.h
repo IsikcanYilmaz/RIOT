@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define ADDR_LED_SIGNAL_GPIO_PIN 0 //16
+#define ADDR_LED_SIGNAL_GPIO_PIN GPIO9
 
 #define ADDR_LED_PWM_DIVIDER 20
 #define ADDR_LED_PWM_WRAP 6 // eyeball measure. leds seem fine with it
@@ -19,6 +19,13 @@
 #define NUM_PANELS (5)
 #define NUM_LEDS (NUM_LEDS_PER_PANEL * NUM_PANELS)
 #define SIGNAL_BUFFER_LEN (sizeof(PixelPacket_t) * NUM_LEDS + 1)
+
+// Total length of one bit 
+#define ADDR_LED_DATA_NS 			  (1250U)
+
+// High times in nanoseconds
+#define ADDR_LED_DATA_ONE_NS    (650U)
+#define ADDR_LED_DATA_ZERO_NS   (325U)
 
 // Sides enum
 typedef enum {
@@ -120,5 +127,4 @@ void AddrLedDriver_TakeUsrCommand(uint8_t argc, char **argv);
 void AddrLedDriver_PrintPixels(void);
 void AddrLedDriver_PrintPixelsRaw(void);
 void AddrLedDriver_Test(void);
-
 #endif
