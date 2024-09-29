@@ -20,5 +20,11 @@ FEATURES_OPTIONAL += periph_timer
 
 # Modules
 USEMODULE += ws281x_esp32
+USEMODULE += xtimer
+
+TIMER = 2
+FREQ = 16000000
+
+# SRC += addr_led_driver.c
 
 include $(RIOTBASE)/Makefile.include
