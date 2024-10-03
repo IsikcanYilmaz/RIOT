@@ -24,8 +24,8 @@
 #define ADDR_LED_DATA_NS 			  (1250U)
 
 // High times in nanoseconds
-#define ADDR_LED_DATA_ONE_NS    (650U)
-#define ADDR_LED_DATA_ZERO_NS   (325U)
+// #define ADDR_LED_DATA_ONE_NS    (650U)
+// #define ADDR_LED_DATA_ZERO_NS   (325U)
 
 // Sides enum
 typedef enum {
@@ -73,6 +73,14 @@ typedef enum {
 // 0,0 1,0 2,0 3,0
 //
 // Y = 0 when on the bottom.
+//
+// Below denotes the raw datastructure that will be sent to the the WS2812B via DMA.
+// Each uint8_t represents the duty cycle (CCR value) the PWM will be set to.
+typedef struct {
+  uint16_t greenRaw[8];
+  uint16_t redRaw[8];
+  uint16_t blueRaw[8];
+} __attribute__((packed)) PixelPacket_t;
 
 // Below type denotes a single pixel (1 LED)
 // Some fields may be redundant
