@@ -3,6 +3,7 @@
 #include "clk.h"
 #include "board.h"
 #include "periph_conf.h"
+#include "periph_cpu.h"
 #include "timex.h"
 #include "ztimer.h"
 #include "xtimer.h"
@@ -48,21 +49,13 @@ void readPixelBuffer(ws281x_t *neopixel)
 int main(void)
 {
 	printf("MAIN\n");
-	kernel_pid_t blink_threadId = thread_create(
-		blink_threadStack,
-		sizeof(blink_threadStack),
-		THREAD_PRIORITY_MAIN - 1,
-		THREAD_CREATE_STACKTEST,
-		blink_threadHandler,
-		NULL,
-		"blink_thread"
-	);
 
+	//
 	uint8_t numPixels = (4*4*5);
-
-	// NeoPixel strip
+	//
+	// // NeoPixel strip
 	ws281x_t neopixel;
-	uint8_t neo_state[numPixels];
+	uint8_t neo_state[numPixels * sizeof(color_rgb_t)];
 	ws281x_params_t neo_params = {
 		.buf = neo_state,
 		.numof = numPixels,
@@ -89,6 +82,15 @@ int main(void)
 		printf("NEOPIXEL LOOP\n");
 	}
 
+	kernel_pid_t blink_threadId = thread_create(
+		blink_threadStack,
+		sizeof(blink_threadStack),
+		THREAD_PRIORITY_MAIN - 1,
+		THREAD_CREATE_STACKTEST,
+		blink_threadHandler,
+		NULL,
+		"blink_thread"
+	);
 	for (;;) {
 		printf("Main created blink thread %d\r\n", blink_threadId);
 		ztimer_sleep(ZTIMER_USEC, 2 * US_PER_SEC);

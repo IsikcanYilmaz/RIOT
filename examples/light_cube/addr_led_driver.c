@@ -1,38 +1,29 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include <assert.h>
 #include "addr_led_driver.h"
 #include "ws281x.h"
 
-/* Stolen from RIOT OS ws281x driver */
+#include "ztimer.h"
+#include "xtimer.h"
+#include "ws281x.h"
+#include "thread.h"
 
-#include "esp_private/esp_clk.h"
-#include "hal/cpu_hal.h"
-#include "soc/rtc.h"
+bool pixelChanged = true;
 
-// TODO add ifdef to enable RMT
-// Below includes for RMT support. RMT is an esp32 hw module that we'll use to
-// output our arbitrary addr led signal.
-#include "esp_intr_alloc.h"
-#include "driver/rmt.h"
-#include "hal/rmt_types.h"
-#include "hal/rmt_ll.h"
-#include "soc/rmt_struct.h"
+// WS2812B Related 
 
-// RMT related
-// static uint32_t _ws281x_one_on;
-// static uint32_t _ws281x_one_off;
-// static uint32_t _ws281x_zero_on;
-// static uint32_t _ws281x_zero_off;
-//
-// static uint8_t _rmt_channel(ws281x_t *dev)
-// {
-// 	for (unsigned i = 0; i < RMT_CH_NUMOF; i++) {
-// 		if (rmt_channel_config[i].gpio == dev->params.pin) {
-// 			return rmt_channel_config[i].channel;
-// 		}
-// 	}
-// 	assert(0);
-// }
+// Convert $byte into codes that WS2812B accepts, that we push out via PWM.
+// 1 Byte converts into 8 bytes, so make sure $*codes pointer points to a block of memory that has 8 bytes allocated
+static inline void ByteToCodes(uint8_t byte, uint16_t *codes)
+{
+}
+
+// Convert a Pixel_t object $p into codes that WS2812B accepts. 
+// 1 Byte converts into 8 bytes, a Pixel_t is 3 bytes so make sure $*packet points to a block of memory that has 24 bytes allocated
+static inline void PixelToPacket(Pixel_t *pixel, PixelPacket_t *packet)
+{
+}
 
 
 void AddrLedDriver_Init(void)
@@ -58,8 +49,8 @@ void AddrLedDriver_DisplayStrip(AddrLedStrip_t *l)
     PixelPacket_t *currPixelPacket = pixelPacketBufferPtr + i;
     PixelToPacket(currPixel, currPixelPacket);
   }
-	dma_channel_transfer_from_buffer_now(dma_chan, pixelPacketBufferPtr, sizeof(PixelPacket_t) * NUM_LEDS);
-	dma_channel_wait_for_finish_blocking(dma_chan);
-	pwm_set_gpio_level(ADDR_LED_SIGNAL_GPIO_PIN, 0);
+	// dma_channel_transfer_from_buffer_now(dma_chan, pixelPacketBufferPtr, sizeof(PixelPacket_t) * NUM_LEDS);
+	// dma_channel_wait_for_finish_blocking(dma_chan);
+	// pwm_set_gpio_level(ADDR_LED_SIGNAL_GPIO_PIN, 0);
 	pixelChanged = false;
 }

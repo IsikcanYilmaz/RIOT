@@ -288,7 +288,7 @@ static const rmt_channel_config_t rmt_channel_config[] = {
     { 0, WS281X_PARAM_PIN },
 #else
     /* default for boards that don't define WS281X_PARAM_PIN */
-    { 0, GPIO0 },
+    { 0, GPIO9 },
 #endif
 };
 #endif
