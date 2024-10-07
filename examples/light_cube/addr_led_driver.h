@@ -4,28 +4,17 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "ws281x.h"
 
-#define ADDR_LED_SIGNAL_GPIO_PIN GPIO9
-
-#define ADDR_LED_PWM_DIVIDER 20
-#define ADDR_LED_PWM_WRAP 6 // eyeball measure. leds seem fine with it
-#define ADDR_LED_PWM_HI_CC_VAL 4
-#define ADDR_LED_PWM_LO_CC_VAL 2
-
-#define ADDR_LED_UPDATE_PERIOD_MS 100
-
-#define NUM_LEDS_PER_PANEL (16)
+// Definitions of the cube
+#define NEOPIXEL_SIGNAL_GPIO_PIN (GPIO_PIN(0, 9)) //GPIO9
 #define NUM_LEDS_PER_PANEL_SIDE (4)
+#define NUM_LEDS_PER_PANEL (16)
 #define NUM_PANELS (5)
 #define NUM_LEDS (NUM_LEDS_PER_PANEL * NUM_PANELS)
-#define SIGNAL_BUFFER_LEN (sizeof(PixelPacket_t) * NUM_LEDS + 1)
+#define NEOPIXEL_SIGNAL_BUFFER_LEN (sizeof(PixelPacket_t) * NUM_LEDS + 1)
 
-// Total length of one bit 
-#define ADDR_LED_DATA_NS 			  (1250U)
-
-// High times in nanoseconds
-// #define ADDR_LED_DATA_ONE_NS    (650U)
-// #define ADDR_LED_DATA_ZERO_NS   (325U)
+#define ADDR_LED_UPDATE_PERIOD_MS 100
 
 // Sides enum
 typedef enum {
@@ -93,11 +82,11 @@ typedef struct {
   uint8_t globalX;
   uint8_t globalY;
   uint8_t globalZ;
-
   //Pixel_t *pixN; // The pixel to the North, East, South, West of this pixel
   //Pixel_t *pixE;
   //Pixel_t *pixS;
   //Pixel_t *PixW; // TODO
+	uint16_t stripIdx; // Addition for RIOT ws281x module
 } Pixel_t;
 
 // Below structure denotes the encapsulation of one continuous LED strip (can be in any form. location of pixels handled by upper layer)
@@ -105,7 +94,8 @@ typedef uint16_t PixelPacketBuffer_t;
 typedef struct {
   uint16_t numLeds; // Number of LEDs in the strip
   Pixel_t *pixels; // The 1 dimensional array of Pixel_t objects. an upper layer manages the locations of said pixels
-  PixelPacketBuffer_t *pixelPacketBuffer; // This is the bufer that will hold the raw data bytes to be transmitted that corresponds to the $*pixels array 
+  // PixelPacketBuffer_t *pixelPacketBuffer; // This is the bufer that will hold the raw data bytes to be transmitted that corresponds to the $*pixels array 
+	ws281x_t *neopixelHandle; // Ptr to the datastructure that the ws281x module uses
 } AddrLedStrip_t;
 
 typedef struct {
@@ -122,8 +112,6 @@ void AddrLedDriver_Init(void);
 void AddrLedDriver_DisplayStrip(AddrLedStrip_t *l);
 void AddrLedDriver_DisplayCube(void);
 bool AddrLedDriver_ShouldRedraw(void);
-void AddrLedDriver_StartPollTimer(void);
-void AddrLedDriver_StartPollTimer(void);
 void AddrLedDriver_SetPixelRgb(Pixel_t *p, uint8_t r, uint8_t g, uint8_t b);
 void AddrLedDriver_SetPixelRgbInPanel(Position_e pos, uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b);
 void AddrLedDriver_Clear(void);
