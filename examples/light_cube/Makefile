@@ -25,6 +25,10 @@ USEMODULE += xtimer
 TIMER = 2
 FREQ = 16000000
 
-# SRC += addr_led_driver.c
+EXTERNAL_MODULE_DIRS += $(CURDIR)/submodules
+USEMODULE += colorspace-conversions
+
+INC_DIR += $(CURDIR)/submodules/colorspace-conversions/
+CFLAGS += -I$(INC_DIR)
 
 include $(RIOTBASE)/Makefile.include

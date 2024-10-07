@@ -1,6 +1,7 @@
 #ifndef __BUTTON_H_
 #define __BUTTON_H_
 #include <stdbool.h>
+#include <stdint.h>
 // #include "pico/stdlib.h"
 // #include "hardware/timer.h"
 

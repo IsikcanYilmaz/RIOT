@@ -40,8 +40,8 @@ extern "C" {
  * @brief The high-times in nanoseconds.
  * @{
  */
-#define WS281X_T_DATA_ONE_NS            (650U)
-#define WS281X_T_DATA_ZERO_NS           (325U)
+#define WS281X_T_DATA_ONE_NS            (800U)
+#define WS281X_T_DATA_ZERO_NS           (400U)
 /**@}*/
 
 /**

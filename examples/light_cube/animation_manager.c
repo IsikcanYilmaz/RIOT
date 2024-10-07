@@ -4,12 +4,34 @@
 #include "animation_manager.h"
 // #include "animation_manager.h"
 // #include "animation_scroller.h"
-// #include "animation_canvas.h"
+#include "animation_canvas.h"
 #include "addr_led_driver.h"
 // #include "animation_sparkles.h"
 // #include "pico/time.h"
 #include <string.h>
 // #include "usr_commands.h"
+
+#include "clk.h"
+#include "board.h"
+#include "periph_conf.h"
+#include "periph_cpu.h"
+#include "timex.h"
+#include "ztimer.h"
+#include "xtimer.h"
+#include "periph/pwm.h"
+#include "ws281x.h"
+#include "thread.h"
+
+#include "colorspace_interface.h"
+
+// Neopixel driver objects
+// ws281x_t neopixelHandle;
+// uint8_t pixelBuffer[NEOPIXEL_SIGNAL_BUFFER_LEN];
+// ws281x_params_t neopixelParams = {
+// 	.buf = pixelBuffer,
+// 	.numof = NUM_LEDS,
+// 	.pin = NEOPIXEL_SIGNAL_GPIO_PIN
+// };
 
 // repeating_timer_t animationManUpdateTimer;
 Animation_s *currentAnimation;
@@ -43,61 +65,20 @@ Animation_s animations[ANIMATION_MAX] = {
 	// 	.signal = AnimationSparkles_ReceiveSignal,
 	// 	.getState = AnimationSparkles_GetState
 	// },
-	// [ANIMATION_CANVAS] = {
-	// 	.name = "canvas",
-	// 	.init = AnimationCanvas_Init,
-	// 	.deinit = AnimationCanvas_Deinit,
-	// 	.start = AnimationCanvas_Start,
-	// 	.stop = AnimationCanvas_Stop,
-	// 	.update = AnimationCanvas_Update,
-	// 	.buttonInput = AnimationCanvas_ButtonInput,
-	// 	.usrInput = AnimationCanvas_UsrInput,
-	// 	.signal = AnimationCanvas_ReceiveSignal,
-	// 	.getState = AnimationCanvas_GetState
-	// },
+	[ANIMATION_CANVAS] = {
+		.name = "canvas",
+		.init = AnimationCanvas_Init,
+		.deinit = AnimationCanvas_Deinit,
+		.start = AnimationCanvas_Start,
+		.stop = AnimationCanvas_Stop,
+		.update = AnimationCanvas_Update,
+		.buttonInput = AnimationCanvas_ButtonInput,
+		.usrInput = AnimationCanvas_UsrInput,
+		.signal = AnimationCanvas_ReceiveSignal,
+		.getState = AnimationCanvas_GetState
+	},
 };
 
-// bool AnimationMan_PollCallback(repeating_timer_t *t)
-// {
-// 	// switch(animationManState)
-// 	// {
-// 	// 	case ANIMATION_MAN_STATE_RUNNING:
-// 	// 	{
-// 	// 		currentAnimation->update();
-// 	// 		if (AddrLedDriver_ShouldRedraw()) 
-// 	// 		{
-// 	// 			AddrLedDriver_DisplayCube();
-// 	// 		}
-// 	// 		break;
-// 	// 	}
-// 	// 	case ANIMATION_MAN_STATE_SWITCHING:
-// 	// 	{
-// 	// 		if (currentAnimation->getState() == ANIMATION_STATE_STOPPED)
-// 	// 		{
-// 	// 			printf("Animation faded off. Starting next animation\n");
-// 	// 			AnimationMan_SetAnimation(targetAnimation, true);
-// 	// 		}
-// 	// 		else
-// 	// 		{
-// 	// 			currentAnimation->update();
-// 	// 			if (AddrLedDriver_ShouldRedraw()) 
-// 	// 			{
-// 	// 				AddrLedDriver_DisplayCube();
-// 	// 			}
-// 	// 		}
-// 	// 		break;
-// 	// 	}
-// 	// 	default:
-// 	// 	{
-// 	// 		printf("%s state invalid or not implemented yet %d\n", __FUNCTION__, animationManState);
-// 	// 		animationManState = ANIMATION_MAN_STATE_RUNNING; // TODO placeholder. eventually implement the stopped state. will need for temperature or deep sleep reasons? 
-// 	// 		break;
-// 	// 	}
-// 	// }
-// 	
-// 	return true;
-// }
-//
 static Animation_s * AnimationMan_GetAnimationByIdx(AnimationIdx_e idx)
 {
 	if (idx >= ANIMATION_MAX)
@@ -110,10 +91,25 @@ static Animation_s * AnimationMan_GetAnimationByIdx(AnimationIdx_e idx)
 
 void AnimationMan_Init(void)
 {
-	// currentAnimation = AnimationMan_GetAnimationByIdx(ANIMATION_DEFAULT);
-	// currentAnimation->init(NULL);
-	// animationManInitialized = true;
-	// AnimationMan_StartPollTimer();
+	animationManInitialized = true;
+}
+
+void AnimationMan_ThreadHandler(void *arg)
+{
+	(void) arg;
+	thread_t *thisThread = thread_get_active();
+	const char *thisThreadName = thread_get_name(thisThread);
+	// Main thread for animations. What it should be doing is:
+	// Go through list of interruptions
+	// Interact with the currently running animation
+	// Display current animation
+	while (true)
+	{
+		// printf("ANIM MAN THREAD %s INITIALIZED %d PARAMS: numof %d\n", thisThreadName, animationManInitialized, neopixelHandle.params.numof);
+		// teststripts(&neopixelHandle);
+		// ws281x_write(&neopixelHandle);
+		ztimer_sleep(ZTIMER_USEC, 2 * US_PER_SEC);
+	}
 }
 
 void AnimationMan_StartPollTimer(void)
@@ -142,16 +138,16 @@ void AnimationMan_SetAnimation(AnimationIdx_e anim, bool immediately)
 	if (immediately)
 	{
 		// AnimationMan_StopPollTimer();
-		currentAnimation->deinit();
-		AddrLedDriver_Clear();
-		currentAnimation = &animations[targetAnimation];
-		currentAnimation->init(NULL);
-		animationManState = ANIMATION_MAN_STATE_RUNNING;
+		// currentAnimation->deinit();
+		// AddrLedDriver_Clear();
+		// currentAnimation = &animations[targetAnimation];
+		// currentAnimation->init(NULL);
+		// animationManState = ANIMATION_MAN_STATE_RUNNING;
 		// AnimationMan_StartPollTimer();
 	}
 	else
 	{
-		currentAnimation->signal(ANIMATION_SIGNAL_STOP);
+		// currentAnimation->signal(ANIMATION_SIGNAL_STOP);
 		animationManState = ANIMATION_MAN_STATE_SWITCHING;
 	}
 

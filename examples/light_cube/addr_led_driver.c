@@ -2,55 +2,229 @@
 #include <stdbool.h>
 #include <assert.h>
 #include "addr_led_driver.h"
-#include "ws281x.h"
 
 #include "ztimer.h"
 #include "xtimer.h"
-#include "ws281x.h"
 #include "thread.h"
 
-bool pixelChanged = true;
-
 // WS2812B Related 
+ws281x_t neopixelHandle;
+uint8_t pixelBuffer[NEOPIXEL_SIGNAL_BUFFER_LEN];
+ws281x_params_t neopixelParams = {
+	.buf = pixelBuffer,
+	.numof = NUM_LEDS,
+	.pin = NEOPIXEL_SIGNAL_GPIO_PIN
+};
 
-// Convert $byte into codes that WS2812B accepts, that we push out via PWM.
-// 1 Byte converts into 8 bytes, so make sure $*codes pointer points to a block of memory that has 8 bytes allocated
-static inline void ByteToCodes(uint8_t byte, uint16_t *codes)
+// Cube related
+Pixel_t ledStrip0Pixels[NUM_LEDS];
+AddrLedStrip_t ledStrip0;
+AddrLedPanel_t ledPanels[NUM_PANELS];
+bool pixelChanged = true;
+bool addrLedDriverInitialized = false;
+
+char *positionStrings[NUM_SIDES] = {
+	[NORTH] = "NORTH",
+	[EAST] = "EAST",
+	[SOUTH] = "SOUTH",
+	[WEST] = "WEST",
+	[TOP] = "TOP"
+};
+
+static void InitPanel(AddrLedPanel_t *p)
 {
-}
+  // Set local coordinates of this panel
+  Pixel_t *pixels = p->strip->pixels;
+  for (int i = 0; i < p->numLeds; i++)
+  {
+    Pixel_t *pixel = &pixels[p->stripRange[0] + i];
+    pixel->x = NUM_LEDS_PER_PANEL_SIDE - (i / NUM_LEDS_PER_PANEL_SIDE);
+    pixel->y = NUM_LEDS_PER_PANEL_SIDE - (i % NUM_LEDS_PER_PANEL_SIDE);
+    
+    // TODO // HANDLE GLOBAL COORDINATES
+  }
 
-// Convert a Pixel_t object $p into codes that WS2812B accepts. 
-// 1 Byte converts into 8 bytes, a Pixel_t is 3 bytes so make sure $*packet points to a block of memory that has 24 bytes allocated
-static inline void PixelToPacket(Pixel_t *pixel, PixelPacket_t *packet)
-{
+  // Set global coordinates of this panel
 }
-
 
 void AddrLedDriver_Init(void)
 {
-	// TODO initialize datastructures
-	
-	// Initialize RMT module
-	// uint8_t channel = _rmt_channel(dev);
-	
+	// First init our data structures 
+	// Initialize the strip(s). This initializes one continuous strip. 
+  // If multiple panels are daisychained, that counts as one strip.
+  ledStrip0 = (AddrLedStrip_t) {
+    .numLeds                 = NUM_LEDS,
+    .pixels                  = (Pixel_t *) &ledStrip0Pixels,
+		.neopixelHandle          = &neopixelHandle
+  };
+  // memset(&ledStrip0PacketBuffer, 0x0, SIGNAL_BUFFER_LEN * sizeof(PixelPacketBuffer_t));
+
+  // Initialize the panel structures
+  for (int panelIdx = 0; panelIdx < NUM_PANELS; panelIdx++)
+  {
+    Position_e pos = (Position_e) panelIdx;
+    AddrLedPanel_t p = {
+      .strip = &ledStrip0,
+      .numLeds = NUM_LEDS_PER_PANEL,
+      .stripRange = {(panelIdx * NUM_LEDS_PER_PANEL), ((panelIdx + 1) * NUM_LEDS_PER_PANEL - 1)},
+      .position = pos,
+      .neighborPanels = {NULL, NULL, NULL, NULL}, // TODO
+    };
+    p.stripFirstPixel = &(p.strip->pixels[p.stripRange[0]]);
+    InitPanel(&p);
+    ledPanels[pos] = p;
+  }
+
+	// Initialize our pixels // TODO find a better solution to this? this is for compatibility w the RIOT ws281x module
+	// Lets see if its even needed lol
+	for (int pIdx = 0; pIdx < NUM_LEDS; pIdx++)
+	{
+		ledStrip0Pixels[pIdx].stripIdx = pIdx;
+	}
+
+	// Init the ws281x module 
+	if(ws281x_init(&neopixelHandle, &neopixelParams) != 0) 
+	{
+		printf("Failed to initialize ws281\n");
+		return;
+	}
+	else 
+	{
+		printf("Initialized ws281x. Data length %d one length %d zero length %d\n", WS281X_T_DATA_NS, WS281X_T_DATA_ONE_NS, WS281X_T_DATA_ZERO_NS);
+	}
+}
+
+static void teststrips(ws281x_t *strip)
+{
+	// Color_t testHsv = Color_CreateFromHsv(50, 0.5, 0.5);
+	color_rgb_t color2 = {10, 0, 0};
+	color_rgb_t color1 = {10, 0, 10};
+	static bool onColor1 = true;
+	for(int i = 0; i < strip->params.numof; i++)
+	{
+		if (i % 2 == 0)
+		{
+			onColor1 ? ws281x_set(strip, i, color1) : ws281x_set(strip, i, color2);
+		}
+		else
+		{
+			onColor1 ? ws281x_set(strip, i, color2) : ws281x_set(strip, i, color1);
+		}
+	}
+	// ws281x_set(strip, 0, color1);
+	onColor1 = !onColor1;
+}
+
+static void testsetpixel(ws281x_t *strip)
+{
+	Pixel_t *northTop = AddrLedDriver_GetPixelInPanel(SOUTH, 1, 1);
+	AddrLedDriver_SetPixelRgbInPanel(NORTH, 0, 0, 20, 0, 0);
+	AddrLedDriver_SetPixelRgbInPanel(SOUTH, 0, 0, 20, 0, 0);
+	AddrLedDriver_SetPixelRgbInPanel(WEST, 0, 0, 20, 0, 0);
+	AddrLedDriver_SetPixelRgbInPanel(EAST, 0, 0, 20, 0, 0);
+	AddrLedDriver_SetPixelRgbInPanel(TOP, 0, 0, 20, 0, 0);
 }
 
 void AddrLedDriver_Test(void)
 {
+	// teststrips(&neopixelHandle);
+	// ws281x_write(&neopixelHandle);
 
+	testsetpixel(&neopixelHandle);
+	AddrLedDriver_DisplayStrip(&ledStrip0);
 }
 
 void AddrLedDriver_DisplayStrip(AddrLedStrip_t *l)
 {
-	PixelPacket_t *pixelPacketBufferPtr = (PixelPacket_t *) (l->pixelPacketBuffer);
-  for (int i = 0; i < l->numLeds; i++)
-  {
-    Pixel_t *currPixel = &(l->pixels[i]);
-    PixelPacket_t *currPixelPacket = pixelPacketBufferPtr + i;
-    PixelToPacket(currPixel, currPixelPacket);
-  }
-	// dma_channel_transfer_from_buffer_now(dma_chan, pixelPacketBufferPtr, sizeof(PixelPacket_t) * NUM_LEDS);
-	// dma_channel_wait_for_finish_blocking(dma_chan);
-	// pwm_set_gpio_level(ADDR_LED_SIGNAL_GPIO_PIN, 0);
+	ws281x_write(&neopixelHandle);
 	pixelChanged = false;
+}
+
+void AddrLedDriver_DisplayCube(void)
+{
+	AddrLedDriver_DisplayStrip(&ledStrip0);
+}
+
+void AddrLedDriver_SetPixelRgb(Pixel_t *p, uint8_t r, uint8_t g, uint8_t b)
+{
+  p->red = r;
+  p->green = g;
+  p->blue = b;
+	printf("%d\n", p->stripIdx);
+	ws281x_set(&neopixelHandle, p->stripIdx, (color_rgb_t){r, g, b});
+	pixelChanged = true;
+}
+
+// ! Below depends on the LED structs that this file initializes. these could reside in manager code? but not now
+// fuck it. this _is_ the manager code. until further notice.
+void AddrLedDriver_SetPixelRgbInPanel(Position_e pos, uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b)
+{
+  // sanity checks
+  if (pos >= NUM_SIDES || x > NUM_LEDS_PER_PANEL_SIDE || y > NUM_LEDS_PER_PANEL_SIDE)
+  {
+    printf("Incorrect args to SetPixelRgb %d %d %d\n", pos, x, y);
+    return;  // TODO have an error type
+  }
+  AddrLedPanel_t *panel = AddrLedDriver_GetPanelByLocation(pos);
+  Pixel_t *pixel = AddrLedDriver_GetPixelInPanel(pos, x, y);
+	AddrLedDriver_SetPixelRgb(pixel, r, g, b);
+}
+
+void AddrLedDriver_Clear(void)
+{
+	for (int i = 0; i < NUM_LEDS; i++)
+	{
+		AddrLedDriver_SetPixelRgb(&ledStrip0.pixels[i], 0, 0, 0);
+	}
+}
+
+Pixel_t* AddrLedDriver_GetPixelInPanel(Position_e pos, uint8_t x, uint8_t y)
+{
+  AddrLedPanel_t *panel = AddrLedDriver_GetPanelByLocation(pos);
+  AddrLedStrip_t *strip = panel->strip;
+  uint8_t ledIdx;
+#if LEDS_BEGIN_AT_BOTTOM
+  y = NUM_LEDS_PER_PANEL_SIDE - y - 1;
+#endif
+	y = NUM_LEDS_PER_PANEL_SIDE - 1 - y;// HACK ! y seems inverted. flip it
+	
+  if (y % 2 == 0)
+  {
+    ledIdx = x + (NUM_LEDS_PER_PANEL_SIDE * y);
+  }
+  else
+  {
+    ledIdx = (NUM_LEDS_PER_PANEL_SIDE - 1 - x) + (NUM_LEDS_PER_PANEL_SIDE * y);
+  }
+  return &(panel->stripFirstPixel[ledIdx]);
+}
+
+AddrLedPanel_t* AddrLedDriver_GetPanelByLocation(Position_e pos)
+{
+	if (pos >= NUM_SIDES)
+	{
+		printf("Bad pos %d for %s\n", pos, __FUNCTION__);
+		return NULL;
+	}
+  return &ledPanels[pos];
+}
+
+bool AddrLedDriver_ShouldRedraw(void)
+{
+	return pixelChanged;
+}
+
+char * AddrLedDriver_GetPositionString(Position_e pos)
+{
+	if (pos >= NUM_SIDES)
+	{
+		printf("Bad pos %d to %s\n", pos, __FUNCTION__);
+		return NULL;
+	}
+	return positionStrings[pos];
+}
+
+AddrLedStrip_t* AddrLedDriver_GetStrip(void)
+{
+	return &ledStrip0;
 }
