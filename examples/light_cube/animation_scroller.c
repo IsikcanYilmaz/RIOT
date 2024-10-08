@@ -20,9 +20,11 @@
 #define DEFAULT_LL_S 0.50
 #define DEFAULT_LL_V 0.40
 
-#define DEFAULT_ROW_H_DIFF 20
-#define DEFAULT_INCREMENT_H 0.5
+#define DEFAULT_ROW_H_DIFF 50
+#define DEFAULT_INCREMENT_H 1
 #define DEFAULT_PHASE_H 0.0
+
+#define DEFAULT_FADE_DIFF 0.001
 
 static AnimationState_e state = ANIMATION_STATE_UNINITIALIZED;
 
@@ -94,7 +96,7 @@ static void RunningAction(void)
 static void FadeOffAction(void)
 {
 	// If we're stopping, fade off all LEDs. Check everytime if all LEDs are off
-	currV -= 0.01;
+	currV -= DEFAULT_FADE_DIFF;
 	if (Visual_IsAllDark())
 	{
 		state = ANIMATION_STATE_STOPPED;
@@ -108,7 +110,7 @@ static void FadeUpAction(void)
 	// // Check on any pixel if we've received our V value
 	// Pixel_t *p = &(AddrLedDriver_GetStrip()->pixels[0]);
 	// Color_t c = Color_CreateFromRgb(p->red, p->green, p->blue);
-	currV += 0.01;
+	currV += DEFAULT_FADE_DIFF;
 	if (currV >= ulV)
 	{
 		state = ANIMATION_STATE_RUNNING;
