@@ -44,6 +44,8 @@
 #define DEFAULT_NUM_COLORS 2
 #define MAX_COLORS 10
 
+#define DEFAULT_FADE_DIFF 0.001
+
 // 
 static uint16_t iter = 0;
 static uint64_t lastBurstTimestampMs = 0;
@@ -203,7 +205,7 @@ static void RunningAction(void)
 static void FadeOffAction(void)
 {
 	// If we're stopping, fade off all LEDs. Check everytime if all LEDs are off
-	Visual_IncrementAllByHSV(0,0,-0.01);
+	Visual_IncrementAllByHSV(0,0,-DEFAULT_FADE_DIFF);
 	if (Visual_IsAllDark())
 	{
 		state = ANIMATION_STATE_STOPPED;

@@ -132,7 +132,7 @@ void AnimationMan_ThreadHandler(void *arg)
 			}
 		}
 
-		ztimer_sleep(ZTIMER_USEC, 0.001 * US_PER_SEC);
+		ztimer_sleep(ZTIMER_USEC, 0.01 * US_PER_SEC);
 	}
 }
 
