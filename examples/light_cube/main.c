@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "animation_manager.h"
 #include "clk.h"
@@ -52,19 +54,20 @@ int main(void)
 {
 	printf("MAIN\n");
 
-	// AnimationMan_Init();
-	// kernel_pid_t animationMan_threadId = thread_create(
-	// 	animationMan_threadStack,
-	// 	sizeof(animationMan_threadStack),
-	// 	THREAD_PRIORITY_MAIN - 1,
-	// 	THREAD_CREATE_STACKTEST,
-	// 	AnimationMan_ThreadHandler,
-	// 	NULL,
-	// 	"animationman_thread"
-	// );
-	
 	ztimer_sleep(ZTIMER_USEC, 4 * US_PER_SEC);
+	srand(time(NULL));
 	AddrLedDriver_Init();
+	AnimationMan_Init();
+
+	kernel_pid_t animationMan_threadId = thread_create(
+		animationMan_threadStack,
+		sizeof(animationMan_threadStack),
+		THREAD_PRIORITY_MAIN - 1,
+		THREAD_CREATE_STACKTEST,
+		AnimationMan_ThreadHandler,
+		NULL,
+		"animationman_thread"
+	);
 	
 	kernel_pid_t blink_threadId = thread_create(
 		blink_threadStack,
@@ -75,9 +78,9 @@ int main(void)
 		NULL,
 		"blink_thread"
 	);
+
 	for (;;) {
 		printf("MAIN\n");
-		AddrLedDriver_Test();
 		ztimer_sleep(ZTIMER_USEC, 1 * US_PER_SEC);
 	}
 

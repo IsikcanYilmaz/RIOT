@@ -3,7 +3,7 @@
 #include "color.h"
 #include "colorspace_interface.h"
 // #include "pico/rand.h"
-// #include "visual_util.h"
+#include "visual_util.h"
 #include "editable_value.h"
 // #include "usr_commands.h"
 // #include "hardware/timer.h"
@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
+#include <math.h>
 
 #define DEFAULT_H 0.00
 #define DEFAULT_S 0.80
@@ -100,138 +103,141 @@ uint8_t vacancyIndexes[NUM_LEDS];
 
 static Color_t GenerateRandomColor(void)
 {
-	// double h = remainder(get_rand_32(), (randomUpperLimH - randomLowerLimH + 1)) + randomLowerLimH;
-	// double s = (double) randomLowerLimS + remainder((get_rand_32() % 1000) / 100, (randomUpperLimS - randomLowerLimS + 0.01));
-	// double v = (double) randomLowerLimV + remainder((get_rand_32() % 1000) / 100, (randomUpperLimV - randomLowerLimV + 0.01));
-	// Color_t c = Color_CreateFromHsv(h, s, v);
-	// // Color_PrintColor(c);
-	// return c;
+	double h = fmod(rand(), (randomUpperLimH - randomLowerLimH + 1)) + randomLowerLimH;
+	double s = (double) randomLowerLimS + fmod((rand() % 1000) / 100, (randomUpperLimS - randomLowerLimS + 0.01));
+	double v = (double) randomLowerLimV + fmod((rand() % 1000) / 100, (randomUpperLimV - randomLowerLimV + 0.01));
+	Color_t c = Color_CreateFromHsv(h, s, v);
+	Color_PrintColor(c);
+	return c;
 }
 
 static void SetCurrColorRandomly(void)
 {
-	// if (numColors > 1)
-	// {
-	// 	currColor = &colorArr[get_rand_32() % numColors];
-	// }
+	if (numColors > 1)
+	{
+		currColor = &colorArr[rand() % numColors];
+	}
 }
 
 static void CheckVacancies(void)
 {
-	// AddrLedStrip_t *s = AddrLedDriver_GetStrip();
-	// numVacancies = 0;
-	// for (uint8_t i = 0; i < s->numLeds; i++)
-	// {
-	// 	Pixel_t *p = &(s->pixels[i]); 
-	// 	if (Visual_IsDark(p))
-	// 	{
-	// 		vacancyIndexes[numVacancies] = i;
-	// 		numVacancies++;
-	// 	}
-	// }
+	AddrLedStrip_t *s = AddrLedDriver_GetStrip();
+	numVacancies = 0;
+	for (uint8_t i = 0; i < s->numLeds; i++)
+	{
+		Pixel_t *p = &(s->pixels[i]); 
+		if (Visual_IsDark(p))
+		{
+			vacancyIndexes[numVacancies] = i;
+			numVacancies++;
+		}
+	}
 }
 
 static bool CheckShouldBurst(void)
 {
-	// switch(burstMode)
-	// {
-	// 	case SPARKLES_BURST_RANDOM:
-	// 	{
-	// 		return get_rand_32() % 100 < burstChance;
-	// 		break;
-	// 	}
-	// 	case SPARKLES_BURST_TIMED:
-	// 	{
-	// 		return (burstPeriod < get_absolute_time()/1000 - lastBurstTimestampMs);
-	// 		break;
-	// 	}
-	// 	default:
-	// 	{
-	// 		printf("Bad burst mode!\n");
-	// 		return false;
-	// 	}
-	// }
+	switch(burstMode)
+	{
+		case SPARKLES_BURST_RANDOM:
+		{
+			return rand() % 100 < burstChance;
+			break;
+		}
+		case SPARKLES_BURST_TIMED:
+		{
+			// return (burstPeriod < get_absolute_time()/1000 - lastBurstTimestampMs);
+			printf("SPARKLES_BURST_TIMED not yet implemented\n");
+			return false; // TODO implement
+			break;
+		}
+		default:
+		{
+			printf("Bad burst mode!\n");
+			return false;
+		}
+	}
 }
 
 static void Burst(void)
 {
-	// for (uint8_t i = 0; i < burstSize; i++)
-	// {
-	// 	if (numVacancies == 0)
-	// 	{
-	// 		break;
-	// 	}
-	// 	bool emptyCell = false;
-	// 	Pixel_t *p;
-	// 	AddrLedStrip_t *s = AddrLedDriver_GetStrip();
-	// 	uint8_t randTableIdx = (uint8_t) get_rand_32() % numVacancies;
-	// 	uint8_t randLedIdx = vacancyIndexes[randTableIdx];
-	// 	p = &(s->pixels[randLedIdx]); 
-	// 	if (Visual_IsDark(p))
-	// 	{
-	// 		AddrLedDriver_SetPixelRgb(p, currColor->red, currColor->green, currColor->blue);
-	// 	}
-	// }
+	for (uint8_t i = 0; i < burstSize; i++)
+	{
+		if (numVacancies == 0)
+		{
+			break;
+		}
+		bool emptyCell = false;
+		Pixel_t *p;
+		AddrLedStrip_t *s = AddrLedDriver_GetStrip();
+		uint8_t randTableIdx = (uint8_t) rand() % numVacancies;
+		uint8_t randLedIdx = vacancyIndexes[randTableIdx];
+		p = &(s->pixels[randLedIdx]); 
+		if (Visual_IsDark(p))
+		{
+			AddrLedDriver_SetPixelRgb(p, currColor->red, currColor->green, currColor->blue);
+		}
+	}
 	// lastBurstTimestampMs = get_absolute_time()/1000;
 }
 
 static void RunningAction(void)
 {
-	// CheckVacancies();
-	// if (iter >= iterUntilChange)
-	// {
-	// 	*currColor = GenerateRandomColor();
-	// 	colorIdx = colorIdx % numColors;
-	// 	iter = 0;
-	// }
-	// SetCurrColorRandomly();
-	//
-	// // Dice roll for sparkle. 
-	// if (CheckShouldBurst())
-	// {
-	// 	Burst();
-	// }
-	// Visual_IncrementAllByHSV(hChange,sChange,vChange);
-	// iter++;
+	CheckVacancies();
+	if (iter >= iterUntilChange)
+	{
+		*currColor = GenerateRandomColor();
+		colorIdx = colorIdx % numColors;
+		iter = 0;
+	}
+	SetCurrColorRandomly();
+
+	// Dice roll for sparkle. 
+	if (CheckShouldBurst())
+	{
+		Burst();
+	}
+	Visual_IncrementAllByHSV(hChange,sChange,vChange);
+	iter++;
 }
 
 static void FadeOffAction(void)
 {
-	// // If we're stopping, fade off all LEDs. Check everytime if all LEDs are off
-	// Visual_IncrementAllByHSV(0,0,-0.01);
-	// if (Visual_IsAllDark())
-	// {
-	// 	state = ANIMATION_STATE_STOPPED;
-	// 	printf("Fade off done state %d\n", state);
-	// }
+	// If we're stopping, fade off all LEDs. Check everytime if all LEDs are off
+	Visual_IncrementAllByHSV(0,0,-0.01);
+	if (Visual_IsAllDark())
+	{
+		state = ANIMATION_STATE_STOPPED;
+		printf("Fade off done state %d\n", state);
+	}
 }
 
 static void InitColors(void)
 {
-	// for (uint8_t i = 0; i < MAX_COLORS; i++)
-	// {
-	// 	colorArr[i] = GenerateRandomColor();
-	// }
+	for (uint8_t i = 0; i < MAX_COLORS; i++)
+	{
+		colorArr[i] = GenerateRandomColor();
+	}
 }
 
 static void IterThruColors(void)
 {
-	// colorIdx = (colorIdx + 1) % numColors;
-	// colorArr[colorIdx] = GenerateRandomColor();
+	colorIdx = (colorIdx + 1) % numColors;
+	colorArr[colorIdx] = GenerateRandomColor();
 }
 
 bool AnimationSparkles_Init(void *arg)
 {
-	// InitColors();
-	// AddrLedDriver_Clear();
-	// state = ANIMATION_STATE_RUNNING;
-	// printf("%s\n", __FUNCTION__);
+	InitColors();
+	AddrLedDriver_Clear();
+	state = ANIMATION_STATE_RUNNING;
+	printf("%s\n", __FUNCTION__);
+	return true;
 }
 
 void AnimationSparkles_Deinit(void)
 {
 	// TODO when/if i end up using a dynamic allocator i'll do freeing here. for now, STOP basically means UNINITIALIZED
-	// state = ANIMATION_STATE_UNINITIALIZED;
+	state = ANIMATION_STATE_UNINITIALIZED;
 }
 
 void AnimationSparkles_Start(void)
@@ -244,32 +250,32 @@ void AnimationSparkles_Stop(void)
 
 void AnimationSparkles_Update(void)
 {
-	// switch(state)
-	// {
-	// 	case ANIMATION_STATE_STARTING:
-	// 	{
-	// 		state = ANIMATION_STATE_RUNNING; // TODO populate this area
-	// 	}
-	// 	case ANIMATION_STATE_RUNNING:
-	// 	{
-	// 		RunningAction();
-	// 		break;
-	// 	}
-	// 	case ANIMATION_STATE_STOPPING:
-	// 	{
-	// 		FadeOffAction();
-	// 		break;
-	// 	}
-	// 	case ANIMATION_STATE_STOPPED:
-	// 	{
-	// 		// NOP
-	// 		break;
-	// 	}
-	// 	default:
-	// 	{
-	// 		break;
-	// 	}
-	// }
+	switch(state)
+	{
+		case ANIMATION_STATE_STARTING:
+		{
+			state = ANIMATION_STATE_RUNNING; // TODO populate this area
+		}
+		case ANIMATION_STATE_RUNNING:
+		{
+			RunningAction();
+			break;
+		}
+		case ANIMATION_STATE_STOPPING:
+		{
+			FadeOffAction();
+			break;
+		}
+		case ANIMATION_STATE_STOPPED:
+		{
+			// NOP
+			break;
+		}
+		default:
+		{
+			break;
+		}
+	}
 }
 
 void AnimationSparkles_ButtonInput(Button_e b, ButtonGesture_e g)
@@ -290,25 +296,25 @@ void AnimationSparkles_UsrInput(uint8_t argc, char **argv)
 
 void AnimationSparkles_ReceiveSignal(AnimationSignal_e s)
 {
-	// printf("%s signal received %d\n", __FUNCTION__, s);
-	// switch(s)
-	// {
-	// 	case ANIMATION_SIGNAL_START:
-	// 	{
-	// 		state = ANIMATION_STATE_STARTING;
-	// 		break;
-	// 	}
-	// 	case ANIMATION_SIGNAL_STOP:
-	// 	{
-	// 		state = ANIMATION_STATE_STOPPING;
-	// 		break;
-	// 	}
-	// 	default:
-	// 	{
-	// 		printf("%s bad signal %d\n", __FUNCTION__, s);
-	// 		break;
-	// 	}
-	// }
+	printf("%s signal received %d\n", __FUNCTION__, s);
+	switch(s)
+	{
+		case ANIMATION_SIGNAL_START:
+		{
+			state = ANIMATION_STATE_STARTING;
+			break;
+		}
+		case ANIMATION_SIGNAL_STOP:
+		{
+			state = ANIMATION_STATE_STOPPING;
+			break;
+		}
+		default:
+		{
+			printf("%s bad signal %d\n", __FUNCTION__, s);
+			break;
+		}
+	}
 }
 
 AnimationState_e AnimationSparkles_GetState(void)

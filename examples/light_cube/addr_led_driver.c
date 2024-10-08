@@ -127,10 +127,10 @@ static void testsetpixel(ws281x_t *strip)
 
 void AddrLedDriver_Test(void)
 {
-	// teststrips(&neopixelHandle);
+	teststrips(&neopixelHandle);
 	// ws281x_write(&neopixelHandle);
 
-	testsetpixel(&neopixelHandle);
+	// testsetpixel(&neopixelHandle);
 	AddrLedDriver_DisplayStrip(&ledStrip0);
 }
 
@@ -150,7 +150,6 @@ void AddrLedDriver_SetPixelRgb(Pixel_t *p, uint8_t r, uint8_t g, uint8_t b)
   p->red = r;
   p->green = g;
   p->blue = b;
-	printf("%d\n", p->stripIdx);
 	ws281x_set(&neopixelHandle, p->stripIdx, (color_rgb_t){r, g, b});
 	pixelChanged = true;
 }

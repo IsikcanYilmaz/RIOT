@@ -2,12 +2,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "animation_manager.h"
-// #include "animation_manager.h"
-// #include "animation_scroller.h"
+#include "animation_scroller.h"
 #include "animation_canvas.h"
 #include "addr_led_driver.h"
-// #include "animation_sparkles.h"
-// #include "pico/time.h"
+#include "animation_sparkles.h"
 #include <string.h>
 // #include "usr_commands.h"
 
@@ -24,47 +22,38 @@
 
 #include "colorspace_interface.h"
 
-// Neopixel driver objects
-// ws281x_t neopixelHandle;
-// uint8_t pixelBuffer[NEOPIXEL_SIGNAL_BUFFER_LEN];
-// ws281x_params_t neopixelParams = {
-// 	.buf = pixelBuffer,
-// 	.numof = NUM_LEDS,
-// 	.pin = NEOPIXEL_SIGNAL_GPIO_PIN
-// };
-
 // repeating_timer_t animationManUpdateTimer;
 Animation_s *currentAnimation;
-AnimationManState_e animationManState;
+AnimationManState_e animationManState = ANIMATION_STATE_RUNNING;
 AnimationIdx_e targetAnimation; // for when we're waiting for the switching of another animation
 // TODO could have animations time out as a failsafe?
 static bool animationManInitialized = false;
 
 Animation_s animations[ANIMATION_MAX] = {
-	// [ANIMATION_SCROLLER] = {
-	// 	.name = "scroller",
-	// 	.init = AnimationScroller_Init,
-	// 	.deinit = AnimationScroller_Deinit,
-	// 	.start = AnimationScroller_Start,
-	// 	.stop = AnimationScroller_Stop,
-	// 	.update = AnimationScroller_Update,
-	// 	.buttonInput = AnimationScroller_ButtonInput,
-	// 	.usrInput = AnimationScroller_UsrInput,
-	// 	.signal = AnimationScroller_ReceiveSignal,
-	// 	.getState = AnimationScroller_GetState
-	// },
-	// [ANIMATION_SPARKLES] = {
-	// 	.name = "sparkles",
-	// 	.init = AnimationSparkles_Init,
-	// 	.deinit = AnimationSparkles_Deinit,
-	// 	.start = AnimationSparkles_Start,
-	// 	.stop = AnimationSparkles_Stop,
-	// 	.update = AnimationSparkles_Update,
-	// 	.buttonInput = AnimationSparkles_ButtonInput,
-	// 	.usrInput = AnimationSparkles_UsrInput,
-	// 	.signal = AnimationSparkles_ReceiveSignal,
-	// 	.getState = AnimationSparkles_GetState
-	// },
+	[ANIMATION_SCROLLER] = {
+		.name = "scroller",
+		.init = AnimationScroller_Init,
+		.deinit = AnimationScroller_Deinit,
+		.start = AnimationScroller_Start,
+		.stop = AnimationScroller_Stop,
+		.update = AnimationScroller_Update,
+		.buttonInput = AnimationScroller_ButtonInput,
+		.usrInput = AnimationScroller_UsrInput,
+		.signal = AnimationScroller_ReceiveSignal,
+		.getState = AnimationScroller_GetState
+	},
+	[ANIMATION_SPARKLES] = {
+		.name = "sparkles",
+		.init = AnimationSparkles_Init,
+		.deinit = AnimationSparkles_Deinit,
+		.start = AnimationSparkles_Start,
+		.stop = AnimationSparkles_Stop,
+		.update = AnimationSparkles_Update,
+		.buttonInput = AnimationSparkles_ButtonInput,
+		.usrInput = AnimationSparkles_UsrInput,
+		.signal = AnimationSparkles_ReceiveSignal,
+		.getState = AnimationSparkles_GetState
+	},
 	[ANIMATION_CANVAS] = {
 		.name = "canvas",
 		.init = AnimationCanvas_Init,
@@ -91,6 +80,8 @@ static Animation_s * AnimationMan_GetAnimationByIdx(AnimationIdx_e idx)
 
 void AnimationMan_Init(void)
 {
+	currentAnimation = AnimationMan_GetAnimationByIdx(ANIMATION_DEFAULT);
+	currentAnimation->init(NULL);
 	animationManInitialized = true;
 }
 
@@ -105,10 +96,43 @@ void AnimationMan_ThreadHandler(void *arg)
 	// Display current animation
 	while (true)
 	{
-		// printf("ANIM MAN THREAD %s INITIALIZED %d PARAMS: numof %d\n", thisThreadName, animationManInitialized, neopixelHandle.params.numof);
-		// teststripts(&neopixelHandle);
-		// ws281x_write(&neopixelHandle);
-		ztimer_sleep(ZTIMER_USEC, 2 * US_PER_SEC);
+		switch(animationManState)
+		{
+			case ANIMATION_MAN_STATE_RUNNING:
+				{
+					currentAnimation->update();
+					if (AddrLedDriver_ShouldRedraw()) 
+					{
+						AddrLedDriver_DisplayCube();
+					}
+					break;
+			}
+			case ANIMATION_MAN_STATE_SWITCHING:
+				{
+					if (currentAnimation->getState() == ANIMATION_STATE_STOPPED)
+					{
+						printf("Animation faded off. Starting next animation\n");
+						AnimationMan_SetAnimation(targetAnimation, true);
+					}
+					else
+					{
+						currentAnimation->update();
+						if (AddrLedDriver_ShouldRedraw()) 
+						{
+							AddrLedDriver_DisplayCube();
+						}
+					}
+					break;
+			}
+			default:
+				{
+					printf("%s state invalid or not implemented yet %d\n", __FUNCTION__, animationManState);
+					animationManState = ANIMATION_MAN_STATE_RUNNING; // TODO placeholder. eventually implement the stopped state. will need for temperature or deep sleep reasons? 
+					break;
+			}
+		}
+
+		ztimer_sleep(ZTIMER_USEC, 0.001 * US_PER_SEC);
 	}
 }
 
