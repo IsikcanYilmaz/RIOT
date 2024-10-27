@@ -33,7 +33,7 @@ typedef enum {
 // I realize a Panel may be in the middle or in some arbitrary location of the LED strip/chain. To take that into account
 // the field $stripRange is there. $stripRange[0] - $stripRange[1] denote the beginning and ending LED indices that correspond
 // to the beginning and the ending LEDs in the strip
-// Example:
+// Example: 
 //
 //              Panel 0            Panel 1             ..
 //              ____________       _______________
@@ -82,11 +82,18 @@ typedef struct {
   uint8_t globalX;
   uint8_t globalY;
   uint8_t globalZ;
-  //Pixel_t *pixN; // The pixel to the North, East, South, West of this pixel
-  //Pixel_t *pixE;
-  //Pixel_t *pixS;
-  //Pixel_t *PixW; // TODO
-	uint16_t stripIdx; // Addition for RIOT ws281x module
+
+  struct Pixel_t *neighborN; // The pixel to the North, East, South, West of this pixel
+  struct Pixel_t *neighborE;
+  struct Pixel_t *neighborS;
+  struct Pixel_t *neighborW;
+
+	struct Pixel_t *neighborLeft;
+	struct Pixel_t *neighborRight;
+	struct Pixel_t *neighborUp;
+	struct Pixel_t *neighborDown;
+
+	uint16_t stripIdx; // Index of the pixel in the strip // Addition for RIOT ws281x module
 } Pixel_t;
 
 // Below structure denotes the encapsulation of one continuous LED strip (can be in any form. location of pixels handled by upper layer)
@@ -94,7 +101,6 @@ typedef uint16_t PixelPacketBuffer_t;
 typedef struct {
   uint16_t numLeds; // Number of LEDs in the strip
   Pixel_t *pixels; // The 1 dimensional array of Pixel_t objects. an upper layer manages the locations of said pixels
-  // PixelPacketBuffer_t *pixelPacketBuffer; // This is the bufer that will hold the raw data bytes to be transmitted that corresponds to the $*pixels array 
 	ws281x_t *neopixelHandle; // Ptr to the datastructure that the ws281x module uses
 } AddrLedStrip_t;
 
@@ -118,8 +124,9 @@ void AddrLedDriver_Clear(void);
 char * AddrLedDriver_GetPositionString(Position_e pos);
 AddrLedPanel_t* AddrLedDriver_GetPanelByLocation(Position_e pos);
 Pixel_t* AddrLedDriver_GetPixelInPanel(Position_e pos, uint8_t x, uint8_t y);
+Pixel_t* AddrLedDriver_GetPixelInPanelRelative(Position_e pos, Position_e relativePos, uint8_t x, uint8_t y);
 AddrLedStrip_t* AddrLedDriver_GetStrip(void);
-void AddrLedDriver_TakeUsrCommand(uint8_t argc, char **argv);
+void AddrLedDriver_TakeUsrCommand(int argc, char **argv);
 void AddrLedDriver_PrintPixels(void);
 void AddrLedDriver_PrintPixelsRaw(void);
 void AddrLedDriver_Test(void);

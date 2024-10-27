@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include "addr_led_driver.h"
+#include "usr_commands.h"
 
 #include "ztimer.h"
 #include "xtimer.h"
@@ -57,7 +58,6 @@ void AddrLedDriver_Init(void)
     .pixels                  = (Pixel_t *) &ledStrip0Pixels,
 		.neopixelHandle          = &neopixelHandle
   };
-  // memset(&ledStrip0PacketBuffer, 0x0, SIGNAL_BUFFER_LEN * sizeof(PixelPacketBuffer_t));
 
   // Initialize the panel structures
   for (int panelIdx = 0; panelIdx < NUM_PANELS; panelIdx++)
@@ -73,6 +73,27 @@ void AddrLedDriver_Init(void)
     p.stripFirstPixel = &(p.strip->pixels[p.stripRange[0]]);
     InitPanel(&p);
     ledPanels[pos] = p;
+
+		// Initialize the neighbor fields of our pixels. lets see if it works
+		for (int x = 0; x < NUM_LEDS_PER_PANEL_SIDE; x++)
+		{
+			for (int y = 0; y < NUM_LEDS_PER_PANEL_SIDE; y++)
+			{
+				Pixel_t *pix = AddrLedDriver_GetPixelInPanel(pos, x, y);
+				
+				// NSWE neighbors
+				if (x > 0)
+				{
+
+				}
+
+				if (x < NUM_LEDS_PER_PANEL_SIDE-1)
+				{
+
+				}
+
+			}
+		}
   }
 
 	// Initialize our pixels // TODO find a better solution to this? this is for compatibility w the RIOT ws281x module
@@ -92,6 +113,8 @@ void AddrLedDriver_Init(void)
 	{
 		printf("Initialized ws281x. Data length %d one length %d zero length %d\n", WS281X_T_DATA_NS, WS281X_T_DATA_ONE_NS, WS281X_T_DATA_ZERO_NS);
 	}
+
+	addrLedDriverInitialized = true;
 }
 
 static void teststrips(ws281x_t *strip)
@@ -142,7 +165,10 @@ void AddrLedDriver_DisplayStrip(AddrLedStrip_t *l)
 
 void AddrLedDriver_DisplayCube(void)
 {
+	// ztimer_now_t t0 = ztimer_now(ZTIMER_USEC); // Takes around 140 ms which is too goddam much. pico takes 5ms because it dmas the data TODO do that here
 	AddrLedDriver_DisplayStrip(&ledStrip0);
+	// ztimer_now_t t1 = ztimer_now(ZTIMER_USEC);
+	// printf("Display strip took %d ms\n", (t1-t0));
 }
 
 void AddrLedDriver_SetPixelRgb(Pixel_t *p, uint8_t r, uint8_t g, uint8_t b)
@@ -198,6 +224,42 @@ Pixel_t* AddrLedDriver_GetPixelInPanel(Position_e pos, uint8_t x, uint8_t y)
   return &(panel->stripFirstPixel[ledIdx]);
 }
 
+// Idea behind this function is to retrieve a pixel from the point of view of a different position
+// i.e. instead of looking at the panel from the south position, imagine transforming to another position
+Pixel_t* AddrLedDriver_GetPixelInPanelRelative(Position_e pos, Position_e relativePos, uint8_t x, uint8_t y)
+{
+	uint8_t absX, absY;
+	switch(relativePos)
+	{
+		case EAST:
+		{
+			absX = y;
+			absY = NUM_LEDS_PER_PANEL_SIDE - 1 - x;
+			break;
+		}
+		case NORTH:
+		{
+			absX = y;
+			absY = x;
+			break;
+		}
+		case WEST:
+		{
+			absX = NUM_LEDS_PER_PANEL_SIDE - 1 - y;
+			absY = x;
+			break;
+		}
+		case SOUTH:
+		default:
+		{
+			absX = x;
+			absY = y;
+			break;
+		}
+	}
+	return AddrLedDriver_GetPixelInPanel(pos, absX, absY);
+}
+
 AddrLedPanel_t* AddrLedDriver_GetPanelByLocation(Position_e pos)
 {
 	if (pos >= NUM_SIDES)
@@ -210,6 +272,7 @@ AddrLedPanel_t* AddrLedDriver_GetPanelByLocation(Position_e pos)
 
 bool AddrLedDriver_ShouldRedraw(void)
 {
+	return true;
 	return pixelChanged;
 }
 
@@ -226,4 +289,86 @@ char * AddrLedDriver_GetPositionString(Position_e pos)
 AddrLedStrip_t* AddrLedDriver_GetStrip(void)
 {
 	return &ledStrip0;
+}
+
+void AddrLedDriver_TakeUsrCommand(int argc, char **argv)
+{
+	if (!addrLedDriverInitialized)
+	{
+		return;
+	}
+	ASSERT_ARGS(2);
+	if (strcmp(argv[1], "clear") == 0)
+	{
+		AddrLedDriver_Clear();
+	}
+	// else if (strcmp(argv[1], "relset") == 0)
+	// {
+	// 	// aled relset <pos> <relpos> <x> <y> <r> <g> <b>
+	// 	ASSERT_ARGS(9);
+	// 	Position_e pos = NUM_SIDES;
+	// 	if (strcmp(argv[2], "n") == 0)
+	// 	{
+	// 		pos = NORTH;
+	// 	}
+	// 	else if (strcmp(argv[2], "e") == 0)
+	// 	{
+	// 		pos = EAST;
+	// 	}
+	// 	else if (strcmp(argv[2], "s") == 0)
+	// 	{
+	// 		pos = SOUTH;
+	// 	}
+	// 	else if (strcmp(argv[2], "w") == 0)
+	// 	{
+	// 		pos = WEST;
+	// 	}
+	// 	else if (strcmp(argv[2], "t") == 0)
+	// 	{
+	// 		pos = TOP;
+	// 	}
+	// 	else
+	// 	{
+	// 		printf("BAD SIDE DESCRIPTOR! %s\n", argv[0]);
+	// 		return;
+	// 	}
+	// }
+	else if (strcmp(argv[1], "set") == 0)
+	{
+		// aled set <pos> <x> <y> <r> <g> <b>
+		ASSERT_ARGS(8);
+		Position_e pos = NUM_SIDES;
+		if (strcmp(argv[2], "n") == 0)
+		{
+			pos = NORTH;
+		}
+		else if (strcmp(argv[2], "e") == 0)
+		{
+			pos = EAST;
+		}
+		else if (strcmp(argv[2], "s") == 0)
+		{
+			pos = SOUTH;
+		}
+		else if (strcmp(argv[2], "w") == 0)
+		{
+			pos = WEST;
+		}
+		else if (strcmp(argv[2], "t") == 0)
+		{
+			pos = TOP;
+		}
+		else
+		{
+			printf("BAD SIDE DESCRIPTOR! %s\n", argv[0]);
+			return;
+		}
+		uint8_t x = atoi(argv[3]);
+		uint8_t y = atoi(argv[4]);
+		uint8_t r = atoi(argv[5]);
+		uint8_t g = atoi(argv[6]);
+		uint8_t b = atoi(argv[7]);
+		printf("Setting pixel %s %d %d to %d %d %d\n", AddrLedDriver_GetPositionString(pos), x, y, r, g, b);
+		AddrLedDriver_SetPixelRgbInPanel(pos, x, y, r, g, b);
+	}
 }

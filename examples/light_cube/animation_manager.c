@@ -4,10 +4,11 @@
 #include "animation_manager.h"
 #include "animation_scroller.h"
 #include "animation_canvas.h"
+#include "animation_lines.h"
 #include "addr_led_driver.h"
 #include "animation_sparkles.h"
 #include <string.h>
-// #include "usr_commands.h"
+#include "usr_commands.h"
 
 #include "clk.h"
 #include "board.h"
@@ -24,7 +25,7 @@
 
 // repeating_timer_t animationManUpdateTimer;
 Animation_s *currentAnimation;
-AnimationManState_e animationManState = ANIMATION_STATE_RUNNING;
+AnimationManState_e animationManState = ANIMATION_MAN_STATE_RUNNING;
 AnimationIdx_e targetAnimation; // for when we're waiting for the switching of another animation
 // TODO could have animations time out as a failsafe?
 static bool animationManInitialized = false;
@@ -66,6 +67,18 @@ Animation_s animations[ANIMATION_MAX] = {
 		.signal = AnimationCanvas_ReceiveSignal,
 		.getState = AnimationCanvas_GetState
 	},
+	[ANIMATION_LINES] = {
+		.name = "lines",
+		.init = AnimationLines_Init,
+		.deinit = AnimationLines_Deinit,
+		.start = AnimationLines_Start,
+		.stop = AnimationLines_Stop,
+		.update = AnimationLines_Update,
+		.buttonInput = AnimationLines_ButtonInput,
+		.usrInput = AnimationLines_UsrInput,
+		.signal = AnimationLines_ReceiveSignal,
+		.getState = AnimationLines_GetState
+	}
 };
 
 static Animation_s * AnimationMan_GetAnimationByIdx(AnimationIdx_e idx)
@@ -161,86 +174,89 @@ void AnimationMan_SetAnimation(AnimationIdx_e anim, bool immediately)
 	targetAnimation = anim;
 	if (immediately)
 	{
-		// AnimationMan_StopPollTimer();
-		// currentAnimation->deinit();
-		// AddrLedDriver_Clear();
-		// currentAnimation = &animations[targetAnimation];
-		// currentAnimation->init(NULL);
-		// animationManState = ANIMATION_MAN_STATE_RUNNING;
-		// AnimationMan_StartPollTimer();
+		currentAnimation->deinit();
+		AddrLedDriver_Clear();
+		currentAnimation = &animations[targetAnimation];
+		currentAnimation->init(NULL);
+		animationManState = ANIMATION_MAN_STATE_RUNNING;
 	}
 	else
 	{
-		// currentAnimation->signal(ANIMATION_SIGNAL_STOP);
+		currentAnimation->signal(ANIMATION_SIGNAL_STOP);
 		animationManState = ANIMATION_MAN_STATE_SWITCHING;
 	}
 
 	printf("%s Setting animation to %s. %s\n", __FUNCTION__, animations[anim].name, immediately ? "Immediately" : "Signal sent");
 }
 
-void AnimationMan_TakeUsrCommand(uint8_t argc, char **argv)
+void AnimationMan_TakeUsrCommand(int argc, char **argv)
 {
-	// if (!animationManInitialized)
-	// {
-	// 	return;
+	// if (argc < 3) {
+	// 	printf("usage: %s <id> <on|off|toggle>\n", argv[0]);
+	// 	return -1;
 	// }
-	// ASSERT_ARGS(2);
-	// if (strcmp(argv[1], "set") == 0)
-	// {
-	// 	ASSERT_ARGS(3);
-	// 	for (int i = 0; i < ANIMATION_MAX; i++)
-	// 	{
-	// 		if (strcmp(argv[2], animations[i].name) == 0)
-	// 		{
-	// 			AnimationMan_SetAnimation(i, false);
-	// 			return;
-	// 		}
-	// 	}
-	// }
-	// else
-	// {
-	// 	currentAnimation->usrInput(argc-1, &argv[1]);
-	// }
+
+	if (!animationManInitialized)
+	{
+		return;
+	}
+	ASSERT_ARGS(2);
+	if (strcmp(argv[1], "set") == 0)
+	{
+		ASSERT_ARGS(3);
+		for (int i = 0; i < ANIMATION_MAX; i++)
+		{
+			if (strcmp(argv[2], animations[i].name) == 0)
+			{
+				AnimationMan_SetAnimation(i, false);
+				return;
+			}
+		}
+	}
+	else
+	{
+		currentAnimation->usrInput(argc-1, &argv[1]);
+	}
 }
 
-void AnimationMan_GenericGetSetValPath(EditableValueList_t *l, uint8_t argc, char **argv)
+void AnimationMan_GenericGetSetValPath(EditableValueList_t *l, int argc, char **argv)
 {
-	// if (strcmp(argv[0], "setval") == 0)
-	// {
-	// 	ASSERT_ARGS(3);
-	// 	bool ret = EditableValue_FindAndSetValueFromString(l, argv[1], argv[2]);
-	// 	printf("%s set to %s %s\n", argv[1], argv[2], (ret) ? "SUCCESS" : "FAIL");
-	// }
-	// else if (strcmp(argv[0], "getval") == 0)
-	// {
-	// 	ASSERT_ARGS(1);
-	// 	if (argc == 1)
-	// 	{
-	// 		EditableValue_PrintList(l);
-	// 	}
-	// 	else if (argc == 2)
-	// 	{
-	// 		bool isNumber = (argv[1][0] >= '0' && argv[1][0] <= '9');
-	// 		if (isNumber)
-	// 		{
-	// 			uint16_t valIdx = atoi(argv[1]);
-	// 			if (valIdx >= l->len)
-	// 			{
-	// 				printf("%s bad val idx %d!\n", __FUNCTION__, valIdx);
-	// 				return;
-	// 			}
-	// 			printf("%d ", valIdx);
-	// 			EditableValue_PrintValue(&(l->values[valIdx]));
-	// 		}
-	// 		else
-	// 		{
-	// 			EditableValue_t *ev = EditableValue_FindValueFromString(l, argv[1]);
-	// 			if (ev)
-	// 			{
-	// 				printf("%d ", EditableValue_GetValueIdxFromString(l, argv[1]));
-	// 				EditableValue_PrintValue(ev);
-	// 			}
-	// 		}
-	// 	}
-	// }
+	if (strcmp(argv[0], "setval") == 0)
+	{
+		ASSERT_ARGS(3);
+		bool ret = EditableValue_FindAndSetValueFromString(l, argv[1], argv[2]);
+		printf("%s set to %s %s\n", argv[1], argv[2], (ret) ? "SUCCESS" : "FAIL");
+	}
+	else if (strcmp(argv[0], "getval") == 0)
+	{
+		// ASSERT_ARGS(1);
+		if (argc == 1)
+		{
+			EditableValue_PrintList(l);
+		}
+		else if (argc == 2)
+		{
+			bool isNumber = (argv[1][0] >= '0' && argv[1][0] <= '9');
+			if (isNumber)
+			{
+				uint16_t valIdx = atoi(argv[1]);
+				if (valIdx >= l->len)
+				{
+					printf("%s bad val idx %d!\n", __FUNCTION__, valIdx);
+					return;
+				}
+				printf("%d ", valIdx);
+				EditableValue_PrintValue(&(l->values[valIdx]));
+			}
+			else
+			{
+				EditableValue_t *ev = EditableValue_FindValueFromString(l, argv[1]);
+				if (ev)
+				{
+					printf("%d ", EditableValue_GetValueIdxFromString(l, argv[1]));
+					EditableValue_PrintValue(ev);
+				}
+			}
+		}
+	}
 }

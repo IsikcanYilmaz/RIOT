@@ -10,8 +10,10 @@
 #include "timex.h"
 #include "ztimer.h"
 #include "xtimer.h"
+#include "shell.h"
 
 #include "addr_led_driver.h"
+#include "usr_commands.h"
 
 #include "periph/pwm.h"
 
@@ -19,6 +21,7 @@
 
 #include "thread.h"
 
+extern char line_buf[SHELL_BUFFER_SIZE];
 
 char blink_threadStack[THREAD_STACKSIZE_DEFAULT];
 char animationMan_threadStack[THREAD_STACKSIZE_DEFAULT];
@@ -40,8 +43,8 @@ void *blink_threadHandler(void *arg)
 			LED0_OFF;
 		}
 		on = !on;
-		printf("TEST %d thread %s\r\n", on, thisThreadName);
 		ztimer_sleep(ZTIMER_USEC, 1 * US_PER_SEC);
+		// printf("testtesttest %d\n", line_buf[SHELL_BUFFER_SIZE]);
 	}
 }
 
@@ -52,9 +55,9 @@ void readPixelBuffer(ws281x_t *neopixel)
 
 int main(void)
 {
-	printf("MAIN\n");
+	printf("Light Cube RIOT\n");
 
-	ztimer_sleep(ZTIMER_USEC, 4 * US_PER_SEC);
+	// ztimer_sleep(ZTIMER_USEC, 4 * US_PER_SEC); 
 	srand(time(NULL));
 	AddrLedDriver_Init();
 	AnimationMan_Init();
@@ -79,9 +82,10 @@ int main(void)
 		"blink_thread"
 	);
 
-	for (;;) {
-		printf("MAIN\n");
-		ztimer_sleep(ZTIMER_USEC, 1 * US_PER_SEC);
+	// Finally kick off the shell, this thread will run it
+	UserCommand_Init();
+	for (;;) 
+	{
 	}
 
 	return 0;
