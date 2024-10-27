@@ -21,6 +21,7 @@ FEATURES_OPTIONAL += periph_timer
 # Modules
 USEMODULE += ws281x_esp32
 USEMODULE += xtimer
+USEMODULE += shell
 
 TIMER = 2
 FREQ = 16000000
@@ -30,5 +31,7 @@ USEMODULE += colorspace-conversions
 
 INC_DIR += $(CURDIR)/submodules/colorspace-conversions/
 CFLAGS += -I$(INC_DIR)
+
+CFLAGS += -g -O0
 
 include $(RIOTBASE)/Makefile.include

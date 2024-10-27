@@ -3,28 +3,28 @@
 #include "colorspace_interface.h"
 #include "visual_util.h"
 #include "editable_value.h"
-// #include "usr_commands.h"
+#include "usr_commands.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 
-#define DEFAULT_H 0.80
+#define DEFAULT_H 350.0
 #define DEFAULT_S 0.80
 #define DEFAULT_V 0.00
 
 #define DEFAULT_UL_H 360.0
 #define DEFAULT_UL_S 0.80
-#define DEFAULT_UL_V 0.05
+#define DEFAULT_UL_V 0.25
 
 #define DEFAULT_LL_H 0.0
 #define DEFAULT_LL_S 0.50
 #define DEFAULT_LL_V 0.40
 
 #define DEFAULT_ROW_H_DIFF 50
-#define DEFAULT_INCREMENT_H 1
+#define DEFAULT_INCREMENT_H 0.15
 #define DEFAULT_PHASE_H 0.0
 
-#define DEFAULT_FADE_DIFF 0.001
+#define DEFAULT_FADE_DIFF 0.01
 
 static AnimationState_e state = ANIMATION_STATE_UNINITIALIZED;
 
@@ -88,6 +88,11 @@ static void RunningAction(void)
 			Pixel_t *p = AddrLedDriver_GetPixelInPanel(TOP, col, row);
 			bool midSection = ((row == 1 && col == 1) || (row == 2	&& col == 1) || (row == 1 && col == 2) || (row == 2 && col == 2));
 			Color_t c = Color_CreateFromHsv(phaseH + (midSection ? 5 * rowHDiff : 4 * rowHDiff), currS, currV);
+			// if (midSection)
+			// {
+			// 	printf("%d %d ", row, col);
+			// 	Color_PrintColor(c);
+			// }
 			AddrLedDriver_SetPixelRgb(p, c.red, c.green, c.blue);
 		}
 	}
@@ -203,16 +208,16 @@ void AnimationScroller_ButtonInput(Button_e b, ButtonGesture_e g)
 {
 }
 
-void AnimationScroller_UsrInput(uint8_t argc, char **argv)
+void AnimationScroller_UsrInput(int argc, char **argv)
 {
-	// ASSERT_ARGS(1);
-	// printf("Scroller received usr input:");
-	// for (int i = 0; i < argc; i++)
-	// {
-	// 	printf(" %s", argv[i]);
-	// }
-	// printf("\n");
-	// AnimationMan_GenericGetSetValPath(&editableValuesList, argc, argv);
+	ASSERT_ARGS(1);
+	printf("Scroller received usr input:");
+	for (int i = 0; i < argc; i++)
+	{
+		printf(" %s", argv[i]);
+	}
+	printf("\n");
+	AnimationMan_GenericGetSetValPath(&editableValuesList, argc, argv);
 }
 
 void AnimationScroller_ReceiveSignal(AnimationSignal_e s)
