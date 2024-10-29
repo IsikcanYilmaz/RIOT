@@ -35,14 +35,14 @@
 // #define DEFAULT_NUM_SPARKLES_PER_BURST 1
 // #define DEFAULT_BURST_PERIOD 100 // 1000ms
 
-#define DEFAULT_ITER_UNTIL_HUE_CHANGE 5
+#define DEFAULT_ITER_UNTIL_HUE_CHANGE 1
 
-#define DEFAULT_PIXEL_H_CHANGE_PER_ITER 0
+#define DEFAULT_PIXEL_H_CHANGE_PER_ITER 3
 #define DEFAULT_PIXEL_S_CHANGE_PER_ITER 0.0
-#define DEFAULT_PIXEL_V_CHANGE_PER_ITER -0.1
+#define DEFAULT_PIXEL_V_CHANGE_PER_ITER -0.04
 
-#define DEFAULT_NUM_COLORS 10
-#define MAX_COLORS 10
+#define DEFAULT_NUM_COLORS 100
+#define MAX_COLORS 100
 
 #define DEFAULT_FADE_DIFF 0.01
 
@@ -80,11 +80,15 @@ static uint8_t lineX = 0;
 static uint8_t lineY = 0;
 static Position_e lineHeadPos = SOUTH;
 
-static uint16_t iterBuffer = 5;
+static uint16_t iterDelay = 3;
 static uint16_t loops = 0;
+
+static int8_t row = 0;
+static bool rowGoingUp = true;
 
 static EditableValue_t editableValues[] = 
 {
+	(EditableValue_t) {.name = "iterDelay", .valPtr = (union EightByteData_u *) &iterDelay, .type = UINT16_T, .ll.u16 = 1, .ul.u16 = 500},
 	(EditableValue_t) {.name = "iterUntilChange", .valPtr = (union EightByteData_u *) &iterUntilChange, .type = UINT16_T, .ll.u16 = 1, .ul.u16 = 0xffff},
 	(EditableValue_t) {.name = "numColors", .valPtr = (union EightByteData_u *) &numColors, .type = UINT8_T, .ll.u8 = 0, .ul.u8 = MAX_COLORS},
 	(EditableValue_t) {.name = "randomLowerLimH", .valPtr = (union EightByteData_u *) &randomLowerLimH, .type = DOUBLE, .ll.d = 0.00, .ul.d = 360.00},
@@ -96,10 +100,6 @@ static EditableValue_t editableValues[] =
 	(EditableValue_t) {.name = "hChange", .valPtr = (union EightByteData_u *) &hChange, .type = DOUBLE, .ll.d = -360.00, .ul.d = 360.00},
 	(EditableValue_t) {.name = "sChange", .valPtr = (union EightByteData_u *) &sChange, .type = DOUBLE, .ll.d = -1.00, .ul.d = 1.00},
 	(EditableValue_t) {.name = "vChange", .valPtr = (union EightByteData_u *) &vChange, .type = DOUBLE, .ll.d = -1.00, .ul.d = 1.00},
-	// (EditableValue_t) {.name = "burstMode", .valPtr = (union EightByteData_u *) &burstMode, .type = UINT8_T, .ll.u8 = 0, .ul.u8 = SPARKLES_BURST_MAX},
-	// (EditableValue_t) {.name = "burstPeriod", .valPtr = (union EightByteData_u*) &burstPeriod, .type = UINT32_T, .ll.u16 = 1, .ul.u16 = 0xffff},
-	// (EditableValue_t) {.name = "burstChance", .valPtr = (union EightByteData_u *) &burstChance, .type = UINT8_T,  .ll.u8 = 0, .ul.u8 = 100},
-	// (EditableValue_t) {.name = "burstSize", .valPtr = (union EightByteData_u *) &burstSize, .type = UINT8_T,  .ll.u8 = 0, .ul.u8 = NUM_LEDS},
 };
 static EditableValueList_t editableValuesList = {.name = "lines", .values = &editableValues[0], .len = sizeof(editableValues)/sizeof(EditableValue_t)};
 
@@ -139,34 +139,68 @@ static void SetCurrColorRandomly(void)
 	}
 }
 
+static void RunningActionWithTop(void)
+{
+	// AddrLedDriver_SetPixelRgbInPanel(lineHeadPos, lineX, lineY, currColor->red, currColor->green, currColor->blue);
+	row += (rowGoingUp) ? 1 : -1;
+	lineX = 0;
+	if (row < 0)
+	{
+		lineY = row;
+		rowGoingUp = true;
+		row = 0;
+	}
+	else if (row == NUM_LEDS_PER_PANEL_SIDE) // We're in the top panel now
+	{
+		lineY = 0;	
+	}
+	else if (row == NUM_LEDS_PER_PANEL_SIDE + 1) // we hit the middle
+	{
+		lineY = 1;
+		rowGoingUp = false;
+	}
+	printf("%d %d %d\n", row, lineX, lineY);
+}
+
 static void RunningAction(void)
 {
+	// To slow down the rendering
 	iter++;
-	if (iter % iterBuffer != 0)
+	if (iter % iterDelay != 0)
 	{
 		return;
 	}
 
-	Pixel_t *head = AddrLedDriver_GetPixelInPanel(lineHeadPos, lineX, lineY);
-	AddrLedDriver_SetPixelRgbInPanel(lineHeadPos, lineX, lineY, currColor->red, currColor->green, currColor->blue);
-	AddrLedDriver_SetPixelRgbInPanel(lineHeadPos, lineX, lineY+2, currColor->red, currColor->green, currColor->blue);
-
-	// AddrLedDriver_SetPixelRgbInPanel((lineHeadPos + 2) % TOP, lineX, lineY, currColor->red, currColor->green, currColor->blue);
-	// AddrLedDriver_SetPixelRgbInPanel((lineHeadPos + 2) % TOP, lineX, lineY+2, currColor->red, currColor->green, currColor->blue);
-
+	// LINE
+	AddrLedDriver_SetPixelRgbInPanel(lineHeadPos, lineX, row, currColor->red, currColor->green, currColor->blue);
 	lineX++;
+	lineY++;
 	if (lineX >= NUM_LEDS_PER_PANEL_SIDE)
 	{
 		lineX = 0;
+		lineY = 0;
+
 		lineHeadPos = (lineHeadPos+1) % TOP;
 
 		if (lineHeadPos == SOUTH) // We looped
 		{
 			loops++;
-			if (loops % iterUntilChange)
+			if (loops % iterUntilChange == 0)
 			{
 				// SetCurrColorRandomly();
-				IterThruColors();
+				row += (rowGoingUp) ? 1 : -1;
+				if (row == NUM_LEDS_PER_PANEL_SIDE)
+				{
+					rowGoingUp = false;
+					row = NUM_LEDS_PER_PANEL_SIDE-2;
+				}
+				if (row == 0)
+				{
+					// IterThruColors();
+					SetCurrColorRandomly();
+					rowGoingUp = true;
+					row = 0;
+				}
 			}
 		}
 	}
@@ -218,6 +252,7 @@ void AnimationLines_Update(void)
 		case ANIMATION_STATE_RUNNING:
 		{
 			RunningAction();
+			// RunningActionWithTop();
 			break;
 		}
 		case ANIMATION_STATE_STOPPING:
