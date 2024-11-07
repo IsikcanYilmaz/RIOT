@@ -78,17 +78,21 @@ static volatile AnimationState_e state = ANIMATION_STATE_UNINITIALIZED;
 
 static uint8_t lineX = 0;
 static uint8_t lineY = 0;
-static Position_e lineHeadPos = SOUTH;
+static uint8_t lineIdx = 0; // Testing this idea
+static uint8_t loopRow = 0;
 
-static uint16_t iterDelay = 3;
+static uint16_t delay = 6;
 static uint16_t loops = 0;
 
 static int8_t row = 0;
 static bool rowGoingUp = true;
+static bool goingUp = true;
+static Position_e lineHeadPos = SOUTH;
 
 static EditableValue_t editableValues[] = 
 {
-	(EditableValue_t) {.name = "iterDelay", .valPtr = (union EightByteData_u *) &iterDelay, .type = UINT16_T, .ll.u16 = 1, .ul.u16 = 500},
+	(EditableValue_t) {.name = "delay", .valPtr = (union EightByteData_u *) &delay, .type = UINT16_T, .ll.u16 = 1, .ul.u16 = 500},
+	(EditableValue_t) {.name = "lineIdx", .valPtr = (union EightByteData_u *) &lineIdx, .type = UINT8_T, .ll.u16 = 0, .ul.u8 = 0xff},
 	(EditableValue_t) {.name = "iterUntilChange", .valPtr = (union EightByteData_u *) &iterUntilChange, .type = UINT16_T, .ll.u16 = 1, .ul.u16 = 0xffff},
 	(EditableValue_t) {.name = "numColors", .valPtr = (union EightByteData_u *) &numColors, .type = UINT8_T, .ll.u8 = 0, .ul.u8 = MAX_COLORS},
 	(EditableValue_t) {.name = "randomLowerLimH", .valPtr = (union EightByteData_u *) &randomLowerLimH, .type = DOUBLE, .ll.d = 0.00, .ul.d = 360.00},
@@ -166,15 +170,17 @@ static void RunningAction(void)
 {
 	// To slow down the rendering
 	iter++;
-	if (iter % iterDelay != 0)
+	if (iter % delay != 0)
 	{
 		return;
 	}
 
 	// LINE
 	AddrLedDriver_SetPixelRgbInPanel(lineHeadPos, lineX, row, currColor->red, currColor->green, currColor->blue);
+	uint8_t effectiveRow = row;
 	lineX++;
 	lineY++;
+
 	if (lineX >= NUM_LEDS_PER_PANEL_SIDE)
 	{
 		lineX = 0;
@@ -189,13 +195,15 @@ static void RunningAction(void)
 			{
 				// SetCurrColorRandomly();
 				row += (rowGoingUp) ? 1 : -1;
+			
 				if (row == NUM_LEDS_PER_PANEL_SIDE)
 				{
 					rowGoingUp = false;
-					row = NUM_LEDS_PER_PANEL_SIDE-2;
+					row = NUM_LEDS_PER_PANEL_SIDE-1;
 				}
-				if (row == 0)
+				if (row == -1)
 				{
+					row = 0;
 					// IterThruColors();
 					SetCurrColorRandomly();
 					rowGoingUp = true;
@@ -204,6 +212,46 @@ static void RunningAction(void)
 			}
 		}
 	}
+	#if 0
+
+	lineIdx += (goingUp) ? 1 : -1;
+	Position_e lineHeadPos = SOUTH;
+	Position_e relativeLineHeadPos = SOUTH;
+
+	if (lineIdx == 0) // pong
+	{
+		goingUp = true;
+	}
+
+	if (lineIdx < NUM_LEDS_PER_PANEL * 4) // If we're in the NSWE panels
+	{
+		lineX = lineIdx % NUM_LEDS_PER_PANEL_SIDE;
+		lineY = lineIdx / (NUM_LEDS_PER_PANEL_SIDE * 4);
+		lineHeadPos = (uint8_t) (lineIdx / NUM_LEDS_PER_PANEL_SIDE) % NUM_LEDS_PER_PANEL_SIDE;
+		AddrLedDriver_SetPixelRgbInPanel(lineHeadPos, lineX, lineY, currColor->red, currColor->green, currColor->blue);
+	}
+	else if (lineIdx >= NUM_LEDS_PER_PANEL * 4) // if we're in the top panel
+	{
+		lineHeadPos = TOP;
+		if (lineIdx < NUM_LEDS_PER_PANEL * 4 + 13)  // if this is the outer square
+		{
+			lineX = lineIdx % 3;
+
+		}
+		else // if this is the inner square
+		{
+
+		}
+
+		if (lineIdx == NUM_LEDS) // ping
+		{
+			goingUp = false;
+		}
+
+		Pixel_t *p = AddrLedDriver_GetPixelInPanelRelative(TOP, 
+	}
+	printf("lineIdx %d : x %d, y %d, pos %d\n", lineIdx, lineX, lineY, lineHeadPos);
+	#endif
 	Visual_IncrementAllByHSV(hChange,sChange,vChange);
 }
 

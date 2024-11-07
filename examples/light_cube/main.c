@@ -24,7 +24,6 @@
 extern char line_buf[SHELL_BUFFER_SIZE];
 
 char blink_threadStack[THREAD_STACKSIZE_DEFAULT];
-char animationMan_threadStack[THREAD_STACKSIZE_DEFAULT];
 
 bool on = false;
 
@@ -62,16 +61,6 @@ int main(void)
 	AddrLedDriver_Init();
 	AnimationMan_Init();
 
-	kernel_pid_t animationMan_threadId = thread_create(
-		animationMan_threadStack,
-		sizeof(animationMan_threadStack),
-		THREAD_PRIORITY_MAIN - 1,
-		THREAD_CREATE_STACKTEST,
-		AnimationMan_ThreadHandler,
-		NULL,
-		"animationman_thread"
-	);
-	
 	kernel_pid_t blink_threadId = thread_create(
 		blink_threadStack,
 		sizeof(blink_threadStack),
@@ -82,8 +71,8 @@ int main(void)
 		"blink_thread"
 	);
 
-	// Finally kick off the shell, this thread will run it
 	UserCommand_Init();
+
 	for (;;) 
 	{
 	}

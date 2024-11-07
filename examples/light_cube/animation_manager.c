@@ -23,12 +23,17 @@
 
 #include "colorspace_interface.h"
 
-// repeating_timer_t animationManUpdateTimer;
+char animationMan_threadStack[THREAD_STACKSIZE_DEFAULT];
 Animation_s *currentAnimation;
 AnimationManState_e animationManState = ANIMATION_MAN_STATE_RUNNING;
-AnimationIdx_e targetAnimation; // for when we're waiting for the switching of another animation
+AnimationIdx_e currentAnimationIdx;
+AnimationIdx_e targetAnimationIdx; // for when we're waiting for the switching of another animation
 // TODO could have animations time out as a failsafe?
 static bool animationManInitialized = false;
+
+static uint16_t autoAnimationSwitchMs = 30*60*1000;
+static uint32_t lastAutoAnimationSwitchTimestamp = 0;
+static bool autoAnimationSwitchEnabled = true;
 
 Animation_s animations[ANIMATION_MAX] = {
 	[ANIMATION_SCROLLER] = {
@@ -91,11 +96,27 @@ static Animation_s * AnimationMan_GetAnimationByIdx(AnimationIdx_e idx)
 	return &animations[idx];
 }
 
-void AnimationMan_Init(void)
+static void AnimationMan_PlayNextAnimation(void)
 {
-	currentAnimation = AnimationMan_GetAnimationByIdx(ANIMATION_DEFAULT);
-	currentAnimation->init(NULL);
-	animationManInitialized = true;
+	AnimationMan_SetAnimation((currentAnimationIdx + 1) % ANIMATION_CANVAS, false);
+}
+
+static void AnimationMan_HandleAutoSwitch(void)
+{
+	if (!autoAnimationSwitchEnabled)
+	{
+		return;
+	}
+	else
+	{
+		uint32_t now = ztimer_now(ZTIMER_USEC)/1000;
+		if (ztimer_now(ZTIMER_USEC)/1000 - lastAutoAnimationSwitchTimestamp > autoAnimationSwitchMs) // Time to switch animations
+		{
+			printf("Auto anim switch at %d. %d %d\n", now, lastAutoAnimationSwitchTimestamp, autoAnimationSwitchMs);
+			AnimationMan_PlayNextAnimation();
+			lastAutoAnimationSwitchTimestamp = now;
+		}
+	}
 }
 
 void AnimationMan_ThreadHandler(void *arg)
@@ -109,6 +130,10 @@ void AnimationMan_ThreadHandler(void *arg)
 	// Display current animation
 	while (true)
 	{
+		// Handle auto switching first
+		AnimationMan_HandleAutoSwitch();
+
+		// Main animation switch/case
 		switch(animationManState)
 		{
 			case ANIMATION_MAN_STATE_RUNNING:
@@ -125,7 +150,7 @@ void AnimationMan_ThreadHandler(void *arg)
 					if (currentAnimation->getState() == ANIMATION_STATE_STOPPED)
 					{
 						printf("Animation faded off. Starting next animation\n");
-						AnimationMan_SetAnimation(targetAnimation, true);
+						AnimationMan_SetAnimation(targetAnimationIdx, true);
 					}
 					else
 					{
@@ -144,9 +169,27 @@ void AnimationMan_ThreadHandler(void *arg)
 					break;
 			}
 		}
-
 		ztimer_sleep(ZTIMER_USEC, 0.01 * US_PER_SEC);
 	}
+}
+
+void AnimationMan_Init(void)
+{
+	currentAnimation = AnimationMan_GetAnimationByIdx(ANIMATION_DEFAULT);
+	currentAnimationIdx = ANIMATION_DEFAULT;
+	currentAnimation->init(NULL);
+
+	kernel_pid_t animationMan_threadId = thread_create(
+		animationMan_threadStack,
+		sizeof(animationMan_threadStack),
+		THREAD_PRIORITY_MAIN - 1,
+		THREAD_CREATE_STACKTEST,
+		AnimationMan_ThreadHandler,
+		NULL,
+		"animationman_thread"
+	);
+
+	animationManInitialized = true;
 }
 
 void AnimationMan_StartPollTimer(void)
@@ -171,12 +214,13 @@ void AnimationMan_SetAnimation(AnimationIdx_e anim, bool immediately)
 
 	// TODO make this so that this sends a signal to the running animation which then does its cleanup and fades off
 	// for now, it abruptly changes
-	targetAnimation = anim;
+	targetAnimationIdx = anim;
 	if (immediately)
 	{
 		currentAnimation->deinit();
 		AddrLedDriver_Clear();
-		currentAnimation = &animations[targetAnimation];
+		currentAnimation = &animations[targetAnimationIdx];
+		currentAnimationIdx = anim;
 		currentAnimation->init(NULL);
 		animationManState = ANIMATION_MAN_STATE_RUNNING;
 	}
@@ -212,6 +256,15 @@ void AnimationMan_TakeUsrCommand(int argc, char **argv)
 				return;
 			}
 		}
+	}
+	else if (strcmp(argv[1], "auto") == 0)
+	{
+		ASSERT_ARGS(3);
+		// TODO
+	}
+	else if (strcmp(argv[1], "next") == 0)
+	{
+		AnimationMan_PlayNextAnimation();
 	}
 	else
 	{
