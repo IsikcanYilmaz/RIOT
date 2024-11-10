@@ -33,5 +33,6 @@ INC_DIR += $(CURDIR)/submodules/colorspace-conversions/
 CFLAGS += -I$(INC_DIR)
 
 CFLAGS += -g -O0
+CFLAGS_OPT = -Os # -O0
 
 include $(RIOTBASE)/Makefile.include

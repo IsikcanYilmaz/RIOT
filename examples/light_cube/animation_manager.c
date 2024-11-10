@@ -33,7 +33,7 @@ static bool animationManInitialized = false;
 
 static uint16_t autoAnimationSwitchMs = 30*60*1000;
 static uint32_t lastAutoAnimationSwitchTimestamp = 0;
-static bool autoAnimationSwitchEnabled = true;
+static bool autoAnimationSwitchEnabled = false;
 
 Animation_s animations[ANIMATION_MAX] = {
 	[ANIMATION_SCROLLER] = {
@@ -257,14 +257,14 @@ void AnimationMan_TakeUsrCommand(int argc, char **argv)
 			}
 		}
 	}
-	else if (strcmp(argv[1], "auto") == 0)
-	{
-		ASSERT_ARGS(3);
-		// TODO
-	}
 	else if (strcmp(argv[1], "next") == 0)
 	{
 		AnimationMan_PlayNextAnimation();
+	}
+	else if (strcmp(argv[1], "auto") == 0)
+	{
+		autoAnimationSwitchEnabled = !autoAnimationSwitchEnabled;
+		printf("Auto switch toggled to %d\n", autoAnimationSwitchEnabled);
 	}
 	else
 	{

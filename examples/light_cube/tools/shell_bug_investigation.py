@@ -3,14 +3,18 @@
 import threading
 import serial
 import time
+import argparse
 
-def writerThread(ser):
+def writerThread(ser, payloadStr, count, sleeptime):
     print("Writer Thread")
-    count = 0
+    print(payloadStr, count, sleeptime)
     while(True):
         ser.write("help\n".encode())
-        time.sleep(0.01)
-        count += 1
+        time.sleep(0.001)
+        count -= 1
+        if count == 0:
+            break
+    print("Writer Thread Done")
 
 def readerThread(ser):
     print("Reader Thread")
@@ -21,12 +25,25 @@ def readerThread(ser):
 
 def main():
     ser = serial.Serial("/dev/tty.usbmodem111301")
-    writer = threading.Thread(target=writerThread, args=(ser,))
-    reader = threading.Thread(target=readerThread, args=(ser,))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--payload", type=str, default="help")
+    parser.add_argument("--count", type=int, default=3)
+    parser.add_argument("--sleep", type=float, default=0.001)
+    parser.add_argument("--no_reader", action="store_true")
+    args = parser.parse_args()
+    
+    if not args.no_reader:
+        reader = threading.Thread(target=readerThread, args=(ser,))
+        reader.start()
+
+    writer = threading.Thread(target=writerThread, args=(ser, args.payload, args.count, args.sleep))
+    
     writer.start()
-    reader.start()
     writer.join()
-    reader.join()
+    
+    if not args.no_reader:
+        reader.join()
+
     ser.close()
 
 

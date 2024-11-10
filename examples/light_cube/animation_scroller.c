@@ -20,7 +20,7 @@
 #define DEFAULT_LL_S 0.50
 #define DEFAULT_LL_V 0.10
 
-#define DEFAULT_ROW_H_DIFF 15
+#define DEFAULT_ROW_H_DIFF 10
 #define DEFAULT_INCREMENT_H 1.0
 #define DEFAULT_PHASE_H 0.0
 

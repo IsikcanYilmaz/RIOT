@@ -23,6 +23,6 @@ static const shell_command_t commands[] = {
 void UserCommand_Init(void)
 {
 	memset(&line_buf, 0x0, SHELL_BUFFER_SIZE);
-	shell_run(commands, line_buf, SHELL_BUFFER_SIZE);
+	shell_run(commands, &line_buf, SHELL_BUFFER_SIZE);
 }
 

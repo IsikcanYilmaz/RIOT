@@ -42,14 +42,9 @@ void *blink_threadHandler(void *arg)
 			LED0_OFF;
 		}
 		on = !on;
+		// printf("%d\n", on);
 		ztimer_sleep(ZTIMER_USEC, 1 * US_PER_SEC);
-		// printf("testtesttest %d\n", line_buf[SHELL_BUFFER_SIZE]);
 	}
-}
-
-void readPixelBuffer(ws281x_t *neopixel)
-{
-	
 }
 
 int main(void)
