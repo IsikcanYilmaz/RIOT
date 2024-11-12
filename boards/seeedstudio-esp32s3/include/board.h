@@ -72,7 +72,7 @@
 /** @} */
 #ifndef LED0_PIN        
 #define LED0_PIN        GPIO21
-#define LED0_ACTIVE     (1) // TODO Make sure
+#define LED0_ACTIVE     (0) // TODO Make sure
 #endif
 
 /* include common board definitions as last step */

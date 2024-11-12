@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "animation_manager.h"
 #include "animation_scroller.h"
+#include "animation_oscillator.h"
 #include "animation_canvas.h"
 #include "animation_lines.h"
 #include "addr_led_driver.h"
@@ -33,7 +34,7 @@ static bool animationManInitialized = false;
 
 static uint16_t autoAnimationSwitchMs = 30*60*1000;
 static uint32_t lastAutoAnimationSwitchTimestamp = 0;
-static bool autoAnimationSwitchEnabled = false;
+static bool autoAnimationSwitchEnabled = true;
 
 Animation_s animations[ANIMATION_MAX] = {
 	[ANIMATION_SCROLLER] = {
@@ -83,6 +84,18 @@ Animation_s animations[ANIMATION_MAX] = {
 		.usrInput = AnimationLines_UsrInput,
 		.signal = AnimationLines_ReceiveSignal,
 		.getState = AnimationLines_GetState
+	},
+	[ANIMATION_OSCILLATOR] = {
+		.name = "oscillator",
+		.init = AnimationOscillator_Init,
+		.deinit = AnimationOscillator_Deinit,
+		.start = AnimationOscillator_Start,
+		.stop = AnimationOscillator_Stop,
+		.update = AnimationOscillator_Update,
+		.buttonInput = AnimationOscillator_ButtonInput,
+		.usrInput = AnimationOscillator_UsrInput,
+		.signal = AnimationOscillator_ReceiveSignal,
+		.getState = AnimationOscillator_GetState
 	}
 };
 

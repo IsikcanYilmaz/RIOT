@@ -9,7 +9,7 @@ def writerThread(ser, payloadStr, count, sleeptime):
     print("Writer Thread")
     print(payloadStr, count, sleeptime)
     while(True):
-        ser.write("help\n".encode())
+        ser.write("anim next\n".encode())
         time.sleep(0.001)
         count -= 1
         if count == 0:
@@ -22,6 +22,16 @@ def readerThread(ser):
     while(True):
         print(ser.readline(), count)
         count += 1
+
+# import serial
+# ser = serial.Serial("/dev/tty.usbmodem111301")
+# while(True):
+#     ser.write("help\n".encode())
+#     time.sleep(0.001)
+#     count -= 1
+#     if (count == 0):
+#         break
+# print("Writer done")
 
 def main():
     ser = serial.Serial("/dev/tty.usbmodem111301")

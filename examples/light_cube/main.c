@@ -42,7 +42,6 @@ void *blink_threadHandler(void *arg)
 			LED0_OFF;
 		}
 		on = !on;
-		// printf("%d\n", on);
 		ztimer_sleep(ZTIMER_USEC, 1 * US_PER_SEC);
 	}
 }
