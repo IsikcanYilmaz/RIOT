@@ -322,6 +322,15 @@ static int _recv(netdev_t *netdev, void *buf, size_t len, void *info)
         at86rf2xx_fb_stop(dev);
 #endif
         radio_info->rssi = RSSI_BASE_VAL + ed;
+#ifdef JON_RSSI_LIMITING
+#warning "JON RSSI LIMITOR SET"
+	if (radio_info->rssi < JON_RSSI_LIMITING)
+	{
+		printf("[JON] RSSI %d < %d dropping pkt\n", radio_info->rssi, JON_RSSI_LIMITING);
+		at86rf2xx_set_state(dev, dev->idle_state);
+		return -ENOBUFS;
+	}
+#endif
         DEBUG("[at86rf2xx] LQI:%d high is good, RSSI:%d high is either good or "
               "too much interference.\n", radio_info->lqi, radio_info->rssi);
 #if AT86RF2XX_IS_PERIPH && IS_USED(MODULE_NETDEV_IEEE802154_RX_TIMESTAMP)
