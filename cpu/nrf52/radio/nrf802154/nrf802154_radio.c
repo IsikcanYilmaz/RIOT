@@ -326,6 +326,7 @@ static inline int8_t _hwval_to_ieee802154_dbm(uint8_t hwval)
 
 #ifdef JON_RSSI_LIMITING
 int rssiLimitor = JON_RSSI_LIMITING;
+bool rssiPrint = false;
 #endif
 static int _read(ieee802154_dev_t *dev, void *buf, size_t max_size,
                           ieee802154_rx_info_t *info)
@@ -360,7 +361,8 @@ static int _read(ieee802154_dev_t *dev, void *buf, size_t max_size,
             #warning "JON RSSI LIMITOR SET NRF802154"
             if (rssi_dbm < rssiLimitor)
             {
-                printf("[JON] RSSI %d < %d dropping pkt\n", rssi_dbm, JON_RSSI_LIMITING);
+                if (rssiPrint)
+                    printf("[JON] RSSI %d < %d dropping pkt\n", rssi_dbm, JON_RSSI_LIMITING);
                 return -EPERM;
             }
             #endif
