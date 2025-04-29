@@ -30,6 +30,10 @@
 #include "nrf802154.h"
 #include "net/ieee802154/radio.h"
 
+#ifdef JON_LED0_TO_SHOW_RX
+#include "ccn_nc_demo.h"
+#endif
+
 #define ENABLE_DEBUG        0
 #include "debug.h"
 
@@ -180,6 +184,10 @@ static int _write(ieee802154_dev_t *dev, const iolist_t *iolist)
     }
 
     DEBUG("[nrf802154] send: putting %i bytes into the frame buffer\n", len);
+
+    #ifdef JON_LED1_TO_SHOW_TX
+    CCN_NC_TimedOnboardLedTrigger(1, 50);
+    #endif
 
     /* specify the length of the package. */
     txbuf[0] = len + IEEE802154_FCS_LEN;
@@ -357,6 +365,10 @@ static int _read(ieee802154_dev_t *dev, void *buf, size_t max_size,
             int8_t rssi_dbm = hwlqi + ED_RSSIOFFS - 1;
             radio_info->rssi = ieee802154_dbm_to_rssi(rssi_dbm);
 
+            #ifdef JON_LED0_TO_SHOW_RX
+            CCN_NC_TimedOnboardLedTrigger(0, 50);
+            #endif
+
             #ifdef JON_RSSI_LIMITING
             #warning "JON RSSI LIMITOR SET NRF802154"
             if (rssi_dbm < rssiLimitor)
@@ -365,6 +377,11 @@ static int _read(ieee802154_dev_t *dev, void *buf, size_t max_size,
                     printf("[JON] RSSI %d < %d dropping pkt\n", rssi_dbm, JON_RSSI_LIMITING);
                 return -EPERM;
             }
+
+            #ifdef JON_LED2_TO_SHOW_GOOD_RX
+            CCN_NC_TimedOnboardLedTrigger(2, 50);
+            #endif
+
             #endif
         }
         memcpy(buf, &rxbuf[1], pktlen);
