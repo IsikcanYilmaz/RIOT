@@ -34,6 +34,10 @@
 #include "ccn_nc_demo.h"
 #endif
 
+#ifdef LED0_TO_SHOW_RX // TODO consolidate these
+#include "onboard_leds.h"
+#endif
+
 #define ENABLE_DEBUG        0
 #include "debug.h"
 
@@ -187,6 +191,10 @@ static int _write(ieee802154_dev_t *dev, const iolist_t *iolist)
 
     #ifdef JON_LED1_TO_SHOW_TX
     CCN_NC_TimedOnboardLedTrigger(1, 50);
+    #endif
+
+    #ifdef LED1_TO_SHOW_TX
+    OnboardLeds_Blink(1, 50);
     #endif
 
     /* specify the length of the package. */
@@ -369,6 +377,10 @@ static int _read(ieee802154_dev_t *dev, void *buf, size_t max_size,
             CCN_NC_TimedOnboardLedTrigger(0, 50);
             #endif
 
+            #ifdef LED0_TO_SHOW_RX
+            OnboardLeds_Blink(0, 50);
+            #endif
+
             #ifdef JON_RSSI_LIMITING
             #warning "JON RSSI LIMITOR SET NRF802154"
             if (rssi_dbm < rssiLimitor)
@@ -380,6 +392,10 @@ static int _read(ieee802154_dev_t *dev, void *buf, size_t max_size,
 
             #ifdef JON_LED2_TO_SHOW_GOOD_RX
             CCN_NC_TimedOnboardLedTrigger(2, 50);
+            #endif
+
+            #ifdef LED2_TO_SHOW_GOOD_RX
+            OnboardLeds_Blink(2, 50);
             #endif
 
             #endif
