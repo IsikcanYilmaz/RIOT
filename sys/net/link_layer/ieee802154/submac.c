@@ -27,6 +27,13 @@
 #define ENABLE_DEBUG 0
 #include "debug.h"
 
+#ifdef JON_802154_MAX_RETRANS
+#warning "SUBMAC RETRANSMISSIONS SET IN THROTTLER!!!"
+uint8_t jon802154MaxRetrans = JON_802154_MAX_RETRANS;
+#else
+#warning "SUBMAC RETRANSMISSIONS " CONFIG_IEEE802154_DEFAULT_MAX_FRAME_RETRANS
+#endif
+
 #define CSMA_SENDER_BACKOFF_PERIOD_UNIT_US  (320U)
 #define ACK_TIMEOUT_US                      (864U)
 
@@ -64,7 +71,11 @@ static inline bool _does_handle_csma(ieee802154_dev_t *dev)
 
 static bool _has_retrans_left(ieee802154_submac_t *submac)
 {
+#ifdef JON_802154_MAX_RETRANS
+    return submac->retrans < jon802154MaxRetrans;
+#else
     return submac->retrans < CONFIG_IEEE802154_DEFAULT_MAX_FRAME_RETRANS;
+#endif
 }
 
 static ieee802154_fsm_state_t _tx_end(ieee802154_submac_t *submac, int status,
