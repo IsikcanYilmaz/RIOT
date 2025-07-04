@@ -42,9 +42,17 @@
 #include "net/fib/table.h"
 #endif
 
+#if JON_RELAYS_CODE_AND_CACHE
+#warning "JON_RELAYS_CODE_AND_CACHE ENABLED!"
+
+#include "iperf.h"
+#include "relayer.h"
+
+#endif
+
 #include "net/gnrc/ipv6.h"
 
-#define ENABLE_DEBUG        0
+#define ENABLE_DEBUG        1
 #include "debug.h"
 
 #define _MAX_L2_ADDR_LEN    (8U)
@@ -868,7 +876,7 @@ static void _receive(gnrc_pktsnip_t *pkt)
     if (_pkt_not_for_me(&netif, hdr)) { /* if packet is not for me */
         DEBUG("ipv6: packet destination not this host\n");
 
-#ifdef MODULE_GNRC_IPV6_ROUTER    /* only routers redirect */
+#ifdef MODULE_GNRC_IPV6_ROUTER    /* only routers redirect */ // JON ROUTING POINT OF INTEREST ///////////
         /* redirect to next hop */
         DEBUG("ipv6: decrement hop limit to %u\n", (uint8_t) (hdr->hl - 1));
 
@@ -893,15 +901,26 @@ static void _receive(gnrc_pktsnip_t *pkt)
         }
         /* TODO: check if receiving interface is router */
         else if (--(hdr->hl) > 0) {  /* drop packets that *reach* Hop Limit 0 */
-            DEBUG("ipv6: forward packet to next hop\n");
+            DEBUG("ipv6: forward packet to next hop\n"); // JON WE END UP HERE
 
             /* remove L2 headers around IPV6 */
             if (netif_hdr != NULL) {
                 gnrc_pktbuf_remove_snip(pkt, netif_hdr);
             }
-            pkt = gnrc_pktbuf_reverse_snips(pkt);
+            pkt = gnrc_pktbuf_reverse_snips(pkt); // JON WE PROBABLY END UP HERE
+
+            /////////////////////////////// RELAYER INTERCEPTION BEGIN
+            // JON TEST : IF THIS IS A IPERF_ECHO, ROUTER SHOULD ECHO BACK. LETS SEE WHAT HAPPENS
+            gnrc_pktsnip_t *iperfSnip = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_UNDEF);
+            if (iperfSnip)
+            {
+                Iperf_RelayerIntercept(iperfSnip);
+            }
+            /*netif_hdr = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_NETIF);*/
+
+            /////////////////////////////// RELAYER INTERCEPTION DONE
             if (pkt != NULL) {
-                _send(pkt, false);
+                _send(pkt, false); // JON WE MUST END UP HERE
             }
             else {
                 DEBUG("ipv6: unable to reverse pkt from receive order to send "
