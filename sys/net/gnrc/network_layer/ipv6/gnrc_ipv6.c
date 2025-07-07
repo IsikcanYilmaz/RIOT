@@ -52,7 +52,7 @@
 
 #include "net/gnrc/ipv6.h"
 
-#define ENABLE_DEBUG        1
+#define ENABLE_DEBUG        0
 #include "debug.h"
 
 #define _MAX_L2_ADDR_LEN    (8U)
@@ -914,9 +914,13 @@ static void _receive(gnrc_pktsnip_t *pkt)
             gnrc_pktsnip_t *iperfSnip = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_UNDEF);
             if (iperfSnip)
             {
-                Iperf_RelayerIntercept(iperfSnip);
+                // If this returns false, we wont keep forwarding the packet
+                if (!Iperf_RelayerIntercept(pkt))
+                {
+                    gnrc_pktbuf_release(pkt);
+                    return;
+                }
             }
-            /*netif_hdr = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_NETIF);*/
 
             /////////////////////////////// RELAYER INTERCEPTION DONE
             if (pkt != NULL) {
