@@ -909,8 +909,9 @@ static void _receive(gnrc_pktsnip_t *pkt)
             }
             pkt = gnrc_pktbuf_reverse_snips(pkt); // JON WE PROBABLY END UP HERE
 
-            /////////////////////////////// RELAYER INTERCEPTION BEGIN
-            // JON TEST : IF THIS IS A IPERF_ECHO, ROUTER SHOULD ECHO BACK. LETS SEE WHAT HAPPENS
+            /////////////////////////////// JON RELAYER INTERCEPTION BEGIN
+
+#if JON_RELAYS_CODE_AND_CACHE
             gnrc_pktsnip_t *iperfSnip = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_UNDEF);
             if (iperfSnip)
             {
@@ -921,8 +922,9 @@ static void _receive(gnrc_pktsnip_t *pkt)
                     return;
                 }
             }
+#endif
 
-            /////////////////////////////// RELAYER INTERCEPTION DONE
+            /////////////////////////////// JON RELAYER INTERCEPTION DONE
             if (pkt != NULL) {
                 _send(pkt, false); // JON WE MUST END UP HERE
             }
